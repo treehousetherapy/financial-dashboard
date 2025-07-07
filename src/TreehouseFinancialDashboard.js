@@ -67,22 +67,18 @@ const TreehouseFinancialDashboard = () => {
     const totalRevenue = directTherapyRevenue + supervisionRevenue + familyTrainingRevenue + itpRevenue;
     
     // Expense calculation
-    // Calculate staff costs: Base monthly salary + overtime for excess hours
+    // BT staff costs: Base salary model (they need minimum guaranteed hours)
     const btMonthlyCapacity = staffCount.bt * 130; // 130 hours/month capacity per BT
-    const bcbaMonthlyCapacity = staffCount.bcba * 130; // 130 hours/month capacity per BCBA
-    
-    // Base staff costs (minimum monthly cost)
-    const btBaseCost = staffCount.bt * staffRates.bt * 80; // 80 hours base per month per staff
-    const bcbaBaseCost = staffCount.bcba * staffRates.bcba * 80; // 80 hours base per month per staff
-    
-    // Overtime costs if hours exceed capacity
+    const btBaseCost = staffCount.bt * staffRates.bt * 80; // 80 guaranteed hours per BT
     const btOvertimeCost = directTherapyHours > btMonthlyCapacity ? 
       (directTherapyHours - btMonthlyCapacity) * staffRates.bt * 1.5 : 0;
-    const bcbaOvertimeCost = (supervisionHours + familyTrainingHours) > bcbaMonthlyCapacity ? 
-      ((supervisionHours + familyTrainingHours) - bcbaMonthlyCapacity) * staffRates.bcba * 1.5 : 0;
-    
     const btStaffCost = btBaseCost + btOvertimeCost;
-    const bcbaStaffCost = bcbaBaseCost + bcbaOvertimeCost;
+    
+    // BCBA staff costs: Function-based (supervision + family training + admin overhead)
+    const bcbaDirectServiceHours = supervisionHours + familyTrainingHours;
+    const bcbaAdminTime = bcbaDirectServiceHours * 0.25; // 25% admin time for documentation, planning
+    const bcbaTotalHours = bcbaDirectServiceHours + bcbaAdminTime;
+    const bcbaStaffCost = bcbaTotalHours * staffRates.bcba;
     const totalStaffCost = btStaffCost + bcbaStaffCost;
     const totalExpenses = totalStaffCost + overheadCosts.rent + overheadCosts.other;
     
@@ -112,9 +108,12 @@ const TreehouseFinancialDashboard = () => {
       costPerHour: totalMonthlyHours > 0 ? totalExpenses / totalMonthlyHours : 0,
       profitPerHour: totalMonthlyHours > 0 ? netProfit / totalMonthlyHours : 0,
       btCapacity: btMonthlyCapacity,
-      bcbaCapacity: bcbaMonthlyCapacity,
+      bcbaCapacity: staffCount.bcba * 100, // 100 hours/month realistic BCBA capacity
       btUtilization: btMonthlyCapacity > 0 ? (directTherapyHours / btMonthlyCapacity) * 100 : 0,
-      bcbaUtilization: bcbaMonthlyCapacity > 0 ? ((supervisionHours + familyTrainingHours) / bcbaMonthlyCapacity) * 100 : 0
+      bcbaUtilization: staffCount.bcba > 0 ? (bcbaTotalHours / (staffCount.bcba * 100)) * 100 : 0,
+      bcbaDirectHours: bcbaDirectServiceHours,
+      bcbaAdminHours: bcbaAdminTime,
+      bcbaTotalHours: bcbaTotalHours
     };
   };
 
@@ -479,7 +478,7 @@ const TreehouseFinancialDashboard = () => {
                       onChange={(e) => setStaffCount({...staffCount, bcba: parseInt(e.target.value) || 1})}
                       className="w-full border rounded px-3 py-2"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Capacity: {staffCount.bcba * 130}h/month</p>
+                    <p className="text-xs text-gray-500 mt-1">Capacity: {staffCount.bcba * 100}h/month</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Rate ($/hour)</label>
@@ -798,8 +797,16 @@ const TreehouseFinancialDashboard = () => {
                     <span className="font-bold">{currentMetrics.bcbaCapacity}h/month</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm">Current Load:</span>
-                    <span className="font-bold">{Math.round(currentMetrics.supervisionHours + currentMetrics.familyTrainingHours)}h</span>
+                    <span className="text-xs text-gray-600">Direct Service:</span>
+                    <span className="text-sm">{Math.round(currentMetrics.bcbaDirectHours)}h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-600">Admin/Planning:</span>
+                    <span className="text-sm">{Math.round(currentMetrics.bcbaAdminHours)}h</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-1">
+                    <span className="text-sm">Total Hours:</span>
+                    <span className="font-bold">{Math.round(currentMetrics.bcbaTotalHours)}h</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm">Utilization:</span>
