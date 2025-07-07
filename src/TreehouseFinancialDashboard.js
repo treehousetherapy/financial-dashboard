@@ -42,7 +42,11 @@ const TreehouseFinancialDashboard = () => {
     costInflationAnnual: 0.025
   });
 
-
+  // Staff management state
+  const [staffCount, setStaffCount] = useState({
+    bt: 2,
+    bcba: 1
+  });
 
   // Calculated values
   const calculateMetrics = () => {
@@ -63,9 +67,22 @@ const TreehouseFinancialDashboard = () => {
     const totalRevenue = directTherapyRevenue + supervisionRevenue + familyTrainingRevenue + itpRevenue;
     
     // Expense calculation
-    // Calculate staff costs based on actual service hours worked
-    const btStaffCost = directTherapyHours * staffRates.bt;
-    const bcbaStaffCost = (supervisionHours + familyTrainingHours) * staffRates.bcba;
+    // Calculate staff costs: Base monthly salary + overtime for excess hours
+    const btMonthlyCapacity = staffCount.bt * 130; // 130 hours/month capacity per BT
+    const bcbaMonthlyCapacity = staffCount.bcba * 130; // 130 hours/month capacity per BCBA
+    
+    // Base staff costs (minimum monthly cost)
+    const btBaseCost = staffCount.bt * staffRates.bt * 80; // 80 hours base per month per staff
+    const bcbaBaseCost = staffCount.bcba * staffRates.bcba * 80; // 80 hours base per month per staff
+    
+    // Overtime costs if hours exceed capacity
+    const btOvertimeCost = directTherapyHours > btMonthlyCapacity ? 
+      (directTherapyHours - btMonthlyCapacity) * staffRates.bt * 1.5 : 0;
+    const bcbaOvertimeCost = (supervisionHours + familyTrainingHours) > bcbaMonthlyCapacity ? 
+      ((supervisionHours + familyTrainingHours) - bcbaMonthlyCapacity) * staffRates.bcba * 1.5 : 0;
+    
+    const btStaffCost = btBaseCost + btOvertimeCost;
+    const bcbaStaffCost = bcbaBaseCost + bcbaOvertimeCost;
     const totalStaffCost = btStaffCost + bcbaStaffCost;
     const totalExpenses = totalStaffCost + overheadCosts.rent + overheadCosts.other;
     
@@ -93,7 +110,11 @@ const TreehouseFinancialDashboard = () => {
       profitMargin,
       revenuePerHour: totalMonthlyHours > 0 ? totalRevenue / totalMonthlyHours : 0,
       costPerHour: totalMonthlyHours > 0 ? totalExpenses / totalMonthlyHours : 0,
-      profitPerHour: totalMonthlyHours > 0 ? netProfit / totalMonthlyHours : 0
+      profitPerHour: totalMonthlyHours > 0 ? netProfit / totalMonthlyHours : 0,
+      btCapacity: btMonthlyCapacity,
+      bcbaCapacity: bcbaMonthlyCapacity,
+      btUtilization: btMonthlyCapacity > 0 ? (directTherapyHours / btMonthlyCapacity) * 100 : 0,
+      bcbaUtilization: bcbaMonthlyCapacity > 0 ? ((supervisionHours + familyTrainingHours) / bcbaMonthlyCapacity) * 100 : 0
     };
   };
 
@@ -169,6 +190,7 @@ const TreehouseFinancialDashboard = () => {
       clientData,
       serviceRates,
       staffRates,
+      staffCount,
       overheadCosts,
       serviceDistribution,
       growthAssumptions
@@ -194,7 +216,7 @@ const TreehouseFinancialDashboard = () => {
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <img 
-                src="/treehouse-logo.png.png" 
+                src="/treehouse-logo.png" 
                 alt="Treehouse Therapy Center" 
                 className="h-16 w-16 object-contain"
                 onError={(e) => {
@@ -422,27 +444,53 @@ const TreehouseFinancialDashboard = () => {
             </div>
 
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Cost Structure</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">BT Staff Rate ($/hour)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={staffRates.bt}
-                    onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Staff & Cost Structure</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">BT Staff Count</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={staffCount.bt}
+                      onChange={(e) => setStaffCount({...staffCount, bt: parseInt(e.target.value) || 1})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Capacity: {staffCount.bt * 130}h/month</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">BT Rate ($/hour)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={staffRates.bt}
+                      onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Staff Rate ($/hour)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={staffRates.bcba}
-                    onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Staff Count</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={staffCount.bcba}
+                      onChange={(e) => setStaffCount({...staffCount, bcba: parseInt(e.target.value) || 1})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Capacity: {staffCount.bcba * 130}h/month</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Rate ($/hour)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={staffRates.bcba}
+                      onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rent</label>
@@ -719,6 +767,51 @@ const TreehouseFinancialDashboard = () => {
             </div>
           </div>
           
+          {/* Staff Capacity & Utilization */}
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="font-medium text-gray-900 mb-4">Staff Capacity Analysis</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="text-sm text-blue-600 font-medium mb-3">BT Staff ({staffCount.bt} staff)</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Capacity:</span>
+                    <span className="font-bold">{currentMetrics.btCapacity}h/month</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Current Load:</span>
+                    <span className="font-bold">{Math.round(currentMetrics.directTherapyHours)}h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Utilization:</span>
+                    <span className={`font-bold ${currentMetrics.btUtilization > 80 ? 'text-red-600' : 'text-green-600'}`}>
+                      {currentMetrics.btUtilization.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="text-sm text-green-600 font-medium mb-3">BCBA Staff ({staffCount.bcba} staff)</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Capacity:</span>
+                    <span className="font-bold">{currentMetrics.bcbaCapacity}h/month</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Current Load:</span>
+                    <span className="font-bold">{Math.round(currentMetrics.supervisionHours + currentMetrics.familyTrainingHours)}h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Utilization:</span>
+                    <span className={`font-bold ${currentMetrics.bcbaUtilization > 80 ? 'text-red-600' : 'text-green-600'}`}>
+                      {currentMetrics.bcbaUtilization.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Performance Metrics */}
           <div className="mt-6 pt-6 border-t">
             <h3 className="font-medium text-gray-900 mb-4">Key Performance Indicators</h3>
@@ -736,9 +829,9 @@ const TreehouseFinancialDashboard = () => {
                 <p className="text-lg font-bold text-green-800">{formatCurrency(currentMetrics.profitPerHour)}</p>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg">
-                <p className="text-sm text-purple-600 font-medium">Utilization Rate</p>
+                <p className="text-sm text-purple-600 font-medium">Overall Utilization</p>
                 <p className="text-lg font-bold text-purple-800">
-                  {((currentMetrics.totalMonthlyHours / (currentMetrics.activeClients * 40 * 4.33)) * 100).toFixed(1)}%
+                  {(((currentMetrics.directTherapyHours + currentMetrics.supervisionHours + currentMetrics.familyTrainingHours) / (currentMetrics.btCapacity + currentMetrics.bcbaCapacity)) * 100).toFixed(1)}%
                 </p>
               </div>
             </div>
