@@ -4,23 +4,23 @@ A comprehensive financial analysis and forecasting dashboard for Treehouse Thera
 
 ## Features
 
-- **Real-time Financial Metrics**: Track active clients, monthly hours, revenue, and profit
-- **Client Management**: Add, edit, and manage client information and hours
-- **Financial Forecasting**: Project future performance with customizable assumptions
-- **Scenario Analysis**: Analyze what-if scenarios for business decisions
-- **Break-even Analysis**: Calculate break-even points and safety margins
-- **Data Export**: Export financial data as JSON for further analysis
+* **Real-time Financial Metrics**: Track active clients, monthly hours, revenue, and profit
+* **Client Management**: Add, edit, and manage client information and hours
+* **Financial Forecasting**: Project future performance with customizable assumptions
+* **Scenario Analysis**: Analyze what-if scenarios for business decisions
+* **Break-even Analysis**: Calculate break-even points and safety margins
+* **Data Export**: Export financial data as JSON for further analysis
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (version 14 or higher)
-- npm or yarn
+* Node.js (version 14 or higher)
+* npm or yarn
 
 ### Installation
 
-1. Install Node.js from [nodejs.org](https://nodejs.org/)
+1. Install Node.js from nodejs.org
 2. Clone or download this project
 3. Open terminal/command prompt in the project directory
 4. Run: `npm install`
@@ -32,14 +32,14 @@ The application will open in your browser at `http://localhost:3000`
 
 ### Option 1: Vercel (Recommended - Free)
 
-1. Create account at [vercel.com](https://vercel.com)
+1. Create account at vercel.com
 2. Install Vercel CLI: `npm i -g vercel`
 3. In project directory, run: `vercel`
 4. Follow prompts to deploy
 
 ### Option 2: Netlify (Free)
 
-1. Create account at [netlify.com](https://netlify.com)
+1. Create account at netlify.com
 2. Drag and drop the `build` folder to Netlify dashboard
 3. Or connect GitHub repository for automatic deployments
 
@@ -83,28 +83,29 @@ treehouse-dashboard/
 
 1. **View Mode**: See current financial metrics and forecasts
 2. **Edit Mode**: Click "Edit Mode" to modify:
-   - Client information and hours
-   - Service rates and costs
-   - Growth assumptions
-   - Forecast parameters
+   * Client information and hours
+   * Service rates and costs
+   * Growth assumptions
+   * Forecast parameters
 3. **Export Data**: Click "Export Data" to download financial analysis as JSON
 
 ## Key Metrics Calculated
 
-- **Revenue**: Based on service hours and rates
-- **Expenses**: Staff costs plus overhead
-- **Profit Margin**: Net profit as percentage of revenue
-- **Break-even Point**: Minimum hours needed to cover fixed costs
-- **Utilization Rate**: Percentage of available hours being used
+* **Revenue**: Based on service hours and rates
+* **Expenses**: Staff costs plus overhead
+* **Profit Margin**: Net profit as percentage of revenue
+* **Break-even Point**: Minimum hours needed to cover fixed costs
+* **Utilization Rate**: Percentage of available hours being used
 
 ## Customization
 
 The dashboard is fully customizable. You can modify:
-- Service rates and distributions
-- Staff costs and overhead
-- Growth assumptions
-- Forecast periods
-- Client data
+
+* Service rates and distributions
+* Staff costs and overhead
+* Growth assumptions
+* Forecast periods
+* Client data
 
 ## Support
 

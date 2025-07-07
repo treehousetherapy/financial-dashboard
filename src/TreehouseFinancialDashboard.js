@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Download, Edit3, TrendingUp, DollarSign, Clock, Users } from 'lucide-react';
+import { Download, Edit3, TrendingUp, DollarSign, Clock, Users, Calculator } from 'lucide-react';
 
 const TreehouseFinancialDashboard = () => {
   const [editMode, setEditMode] = useState(false);
+  const [forecastMonths, setForecastMonths] = useState(6);
   
   // Core editable data
   const [clientData, setClientData] = useState([
@@ -93,7 +94,48 @@ const TreehouseFinancialDashboard = () => {
     };
   };
 
+  // Forecast calculation
+  const calculateForecast = () => {
+    const currentMetrics = calculateMetrics();
+    const forecast = [];
+    
+    for (let month = 1; month <= forecastMonths; month++) {
+      // Growth calculations
+      const additionalClients = Math.floor(month * growthAssumptions.newClientsPerMonth);
+      const additionalHours = additionalClients * growthAssumptions.averageNewClientHours;
+      const monthlyRateIncrease = Math.pow(1 + growthAssumptions.rateIncreaseAnnual, month / 12);
+      const monthlyCostIncrease = Math.pow(1 + growthAssumptions.costInflationAnnual, month / 12);
+      
+      // Projected hours
+      const projectedHours = currentMetrics.totalMonthlyHours + additionalHours;
+      
+      // Projected revenue (with rate increases)
+      const projectedRevenue = (currentMetrics.totalRevenue + 
+        (additionalHours * currentMetrics.revenuePerHour)) * monthlyRateIncrease;
+      
+      // Projected expenses (with cost inflation)
+      const projectedExpenses = (currentMetrics.totalExpenses + 
+        (additionalHours * currentMetrics.costPerHour)) * monthlyCostIncrease;
+      
+      const projectedProfit = projectedRevenue - projectedExpenses;
+      const projectedMargin = projectedRevenue > 0 ? (projectedProfit / projectedRevenue) * 100 : 0;
+      
+      forecast.push({
+        month,
+        clients: currentMetrics.activeClients + additionalClients,
+        hours: projectedHours,
+        revenue: projectedRevenue,
+        expenses: projectedExpenses,
+        profit: projectedProfit,
+        margin: projectedMargin
+      });
+    }
+    
+    return forecast;
+  };
+
   const currentMetrics = calculateMetrics();
+  const forecast = calculateForecast();
 
   const updateClientData = (id, field, value) => {
     setClientData(clients => 
@@ -120,6 +162,7 @@ const TreehouseFinancialDashboard = () => {
   const downloadData = () => {
     const data = {
       currentMetrics,
+      forecast,
       clientData,
       serviceRates,
       staffRates,
@@ -217,83 +260,6 @@ const TreehouseFinancialDashboard = () => {
           </div>
         </div>
 
-        {/* Financial Settings */}
-        {editMode && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Service Rates</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Direct Therapy Rate</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={serviceRates.directTherapy}
-                    onChange={(e) => setServiceRates({...serviceRates, directTherapy: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Supervision Rate</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={serviceRates.supervision}
-                    onChange={(e) => setServiceRates({...serviceRates, supervision: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Cost Structure</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">BT Staff Rate ($/hour)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={staffRates.bt}
-                    onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Staff Rate ($/hour)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={staffRates.bcba}
-                    onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rent</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={overheadCosts.rent}
-                    onChange={(e) => setOverheadCosts({...overheadCosts, rent: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Other Overhead</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={overheadCosts.other}
-                    onChange={(e) => setOverheadCosts({...overheadCosts, other: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Client Management */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -389,56 +355,383 @@ const TreehouseFinancialDashboard = () => {
           </div>
         </div>
 
-        {/* Growth Assumptions */}
+        {/* Financial Settings */}
         {editMode && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Growth Assumptions</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Service Distribution - Direct Therapy (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={serviceDistribution.directTherapy * 100}
-                  onChange={(e) => setServiceDistribution({...serviceDistribution, directTherapy: (parseFloat(e.target.value) || 0) / 100})}
-                  className="w-full border rounded px-3 py-2"
-                />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Service Rates</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Direct Therapy Rate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={serviceRates.directTherapy}
+                    onChange={(e) => setServiceRates({...serviceRates, directTherapy: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supervision Rate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={serviceRates.supervision}
+                    onChange={(e) => setServiceRates({...serviceRates, supervision: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Family Training Rate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={serviceRates.familyTraining}
+                    onChange={(e) => setServiceRates({...serviceRates, familyTraining: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ITP Rate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={serviceRates.itp}
+                    onChange={(e) => setServiceRates({...serviceRates, itp: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Clients Per Month</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={growthAssumptions.newClientsPerMonth}
-                  onChange={(e) => setGrowthAssumptions({...growthAssumptions, newClientsPerMonth: parseFloat(e.target.value) || 0})}
-                  className="w-full border rounded px-3 py-2"
-                />
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Cost Structure</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">BT Staff Rate ($/hour)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={staffRates.bt}
+                    onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Staff Rate ($/hour)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={staffRates.bcba}
+                    onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rent</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={overheadCosts.rent}
+                    onChange={(e) => setOverheadCosts({...overheadCosts, rent: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Other Overhead</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={overheadCosts.other}
+                    onChange={(e) => setOverheadCosts({...overheadCosts, other: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Performance Metrics */}
+        {/* Forecast Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              Financial Forecast
+            </h2>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Forecast Period:</label>
+              <select
+                value={forecastMonths}
+                onChange={(e) => setForecastMonths(parseInt(e.target.value))}
+                className="border rounded px-3 py-1"
+              >
+                <option value={3}>3 Months</option>
+                <option value={6}>6 Months</option>
+                <option value={12}>12 Months</option>
+                <option value={24}>24 Months</option>
+              </select>
+            </div>
+          </div>
+
+          {editMode && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Growth Assumptions</h4>
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-sm text-gray-700">New Clients/Month</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={growthAssumptions.newClientsPerMonth}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, newClientsPerMonth: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700">Avg New Client Hours</label>
+                    <input
+                      type="number"
+                      value={growthAssumptions.averageNewClientHours}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, averageNewClientHours: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Annual Changes</h4>
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-sm text-gray-700">Rate Increase (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={growthAssumptions.rateIncreaseAnnual * 100}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, rateIncreaseAnnual: (parseFloat(e.target.value) || 0) / 100})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700">Cost Inflation (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={growthAssumptions.costInflationAnnual * 100}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, costInflationAnnual: (parseFloat(e.target.value) || 0) / 100})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2">Month</th>
+                  <th className="text-center py-2">Clients</th>
+                  <th className="text-center py-2">Hours</th>
+                  <th className="text-center py-2">Revenue</th>
+                  <th className="text-center py-2">Expenses</th>
+                  <th className="text-center py-2">Net Profit</th>
+                  <th className="text-center py-2">Margin</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b bg-blue-50">
+                  <td className="py-3 font-medium">Current</td>
+                  <td className="text-center py-3">{currentMetrics.activeClients}</td>
+                  <td className="text-center py-3">{Math.round(currentMetrics.totalMonthlyHours)}</td>
+                  <td className="text-center py-3">{formatCurrency(currentMetrics.totalRevenue)}</td>
+                  <td className="text-center py-3">{formatCurrency(currentMetrics.totalExpenses)}</td>
+                  <td className="text-center py-3">{formatCurrency(currentMetrics.netProfit)}</td>
+                  <td className="text-center py-3">{currentMetrics.profitMargin.toFixed(1)}%</td>
+                </tr>
+                {forecast.map(month => (
+                  <tr key={month.month} className="border-b hover:bg-gray-50">
+                    <td className="py-3">Month {month.month}</td>
+                    <td className="text-center py-3">{month.clients}</td>
+                    <td className="text-center py-3">{Math.round(month.hours)}</td>
+                    <td className="text-center py-3">{formatCurrency(month.revenue)}</td>
+                    <td className="text-center py-3">{formatCurrency(month.expenses)}</td>
+                    <td className="text-center py-3">{formatCurrency(month.profit)}</td>
+                    <td className="text-center py-3">{month.margin.toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Detailed Breakdown */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Key Performance Indicators</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600 font-medium">Revenue per Hour</p>
-              <p className="text-lg font-bold text-blue-800">{formatCurrency(currentMetrics.revenuePerHour)}</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Current Month Breakdown</h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Service Hours</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Direct Therapy:</span>
+                  <span>{Math.round(currentMetrics.directTherapyHours)}h</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Supervision:</span>
+                  <span>{Math.round(currentMetrics.supervisionHours)}h</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Family Training:</span>
+                  <span>{Math.round(currentMetrics.familyTrainingHours)}h</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">Total:</span>
+                  <span className="font-medium">{Math.round(currentMetrics.totalMonthlyHours)}h</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <p className="text-sm text-red-600 font-medium">Cost per Hour</p>
-              <p className="text-lg font-bold text-red-800">{formatCurrency(currentMetrics.costPerHour)}</p>
+            
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Revenue Sources</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Direct Therapy:</span>
+                  <span>{formatCurrency(currentMetrics.directTherapyRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Supervision:</span>
+                  <span>{formatCurrency(currentMetrics.supervisionRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Family Training:</span>
+                  <span>{formatCurrency(currentMetrics.familyTrainingRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">ITP:</span>
+                  <span>{formatCurrency(currentMetrics.itpRevenue)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">Total:</span>
+                  <span className="font-medium">{formatCurrency(currentMetrics.totalRevenue)}</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">Profit per Hour</p>
-              <p className="text-lg font-bold text-green-800">{formatCurrency(currentMetrics.profitPerHour)}</p>
+            
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Expenses</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">BT Staff:</span>
+                  <span>{formatCurrency(currentMetrics.btStaffCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">BCBA Staff:</span>
+                  <span>{formatCurrency(currentMetrics.bcbaStaffCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Rent:</span>
+                  <span>{formatCurrency(overheadCosts.rent)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Other Overhead:</span>
+                  <span>{formatCurrency(overheadCosts.other)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">Total:</span>
+                  <span className="font-medium">{formatCurrency(currentMetrics.totalExpenses)}</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <p className="text-sm text-purple-600 font-medium">Utilization Rate</p>
-              <p className="text-lg font-bold text-purple-800">
-                {((currentMetrics.totalMonthlyHours / (currentMetrics.activeClients * 40 * 4.33)) * 100).toFixed(1)}%
-              </p>
+          </div>
+          
+          {/* Performance Metrics */}
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="font-medium text-gray-900 mb-4">Key Performance Indicators</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium">Revenue per Hour</p>
+                <p className="text-lg font-bold text-blue-800">{formatCurrency(currentMetrics.revenuePerHour)}</p>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg">
+                <p className="text-sm text-red-600 font-medium">Cost per Hour</p>
+                <p className="text-lg font-bold text-red-800">{formatCurrency(currentMetrics.costPerHour)}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-600 font-medium">Profit per Hour</p>
+                <p className="text-lg font-bold text-green-800">{formatCurrency(currentMetrics.profitPerHour)}</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <p className="text-sm text-purple-600 font-medium">Utilization Rate</p>
+                <p className="text-lg font-bold text-purple-800">
+                  {((currentMetrics.totalMonthlyHours / (currentMetrics.activeClients * 40 * 4.33)) * 100).toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Scenario Analysis */}
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="font-medium text-gray-900 mb-4">What-If Scenarios</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {[
+                { name: "Add 1 Client (15h/week)", change: { clients: 1, hours: 15 * 4.33 } },
+                { name: "10% Rate Increase", change: { rateIncrease: 0.1 } },
+                { name: "Reduce Overhead 20%", change: { overheadReduction: 0.2 } }
+              ].map((scenario, index) => {
+                let scenarioRevenue = currentMetrics.totalRevenue;
+                let scenarioExpenses = currentMetrics.totalExpenses;
+                
+                if (scenario.change.clients) {
+                  scenarioRevenue += scenario.change.hours * currentMetrics.revenuePerHour;
+                  scenarioExpenses += scenario.change.hours * currentMetrics.costPerHour;
+                }
+                if (scenario.change.rateIncrease) {
+                  scenarioRevenue *= (1 + scenario.change.rateIncrease);
+                }
+                if (scenario.change.overheadReduction) {
+                  scenarioExpenses -= (overheadCosts.rent + overheadCosts.other) * scenario.change.overheadReduction;
+                }
+                
+                const scenarioProfit = scenarioRevenue - scenarioExpenses;
+                const profitChange = scenarioProfit - currentMetrics.netProfit;
+                
+                return (
+                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-900">{scenario.name}</p>
+                    <p className="text-lg font-bold text-gray-800">{formatCurrency(scenarioProfit)}</p>
+                    <p className={`text-sm ${profitChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {profitChange > 0 ? '+' : ''}{formatCurrency(profitChange)} vs current
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Break-even Analysis */}
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="font-medium text-gray-900 mb-4">Break-even Analysis</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <p className="text-sm text-yellow-600 font-medium">Break-even Hours (Monthly)</p>
+                <p className="text-2xl font-bold text-yellow-800">
+                  {Math.ceil((overheadCosts.rent + overheadCosts.other) / (currentMetrics.revenuePerHour - currentMetrics.costPerHour))}
+                </p>
+                <p className="text-sm text-yellow-600 mt-1">
+                  Fixed costs ÷ (Revenue per hour - Variable cost per hour)
+                </p>
+              </div>
+              <div className="bg-indigo-50 p-4 rounded-lg">
+                <p className="text-sm text-indigo-600 font-medium">Safety Margin</p>
+                <p className="text-2xl font-bold text-indigo-800">
+                  {((currentMetrics.totalMonthlyHours / Math.ceil((overheadCosts.rent + overheadCosts.other) / (currentMetrics.revenuePerHour - currentMetrics.costPerHour))) * 100 - 100).toFixed(0)}%
+                </p>
+                <p className="text-sm text-indigo-600 mt-1">
+                  Current hours above break-even point
+                </p>
+              </div>
             </div>
           </div>
         </div>
