@@ -42,6 +42,12 @@ const TreehouseFinancialDashboard = () => {
     costInflationAnnual: 0.025
   });
 
+  // Staff count state
+  const [staffCount, setStaffCount] = useState({
+    bt: 3,
+    bcba: 1
+  });
+
   // Calculated values
   const calculateMetrics = () => {
     const activeClients = clientData.filter(client => client.active);
@@ -61,10 +67,15 @@ const TreehouseFinancialDashboard = () => {
     const totalRevenue = directTherapyRevenue + supervisionRevenue + familyTrainingRevenue + itpRevenue;
     
     // Expense calculation
-    const btStaffCost = totalMonthlyHours * staffRates.bt;
-    const bcbaStaffCost = (supervisionHours + familyTrainingHours) * staffRates.bcba;
-    const totalStaffCost = btStaffCost + bcbaStaffCost;
+    // Calculate monthly salary costs based on full-time hours (173.33 hours/month) and staff count
+    const btMonthlySalary = staffRates.bt * 173.33 * staffCount.bt;
+    const bcbaMonthlySalary = staffRates.bcba * 173.33 * staffCount.bcba;
+    const totalStaffCost = btMonthlySalary + bcbaMonthlySalary;
     const totalExpenses = totalStaffCost + overheadCosts.rent + overheadCosts.other;
+    
+    // Keep individual cost tracking for reporting
+    const btStaffCost = btMonthlySalary;
+    const bcbaStaffCost = bcbaMonthlySalary;
     
     // Profit calculation
     const netProfit = totalRevenue - totalExpenses;
@@ -166,6 +177,7 @@ const TreehouseFinancialDashboard = () => {
       clientData,
       serviceRates,
       staffRates,
+      staffCount,
       overheadCosts,
       serviceDistribution,
       growthAssumptions
@@ -407,25 +419,47 @@ const TreehouseFinancialDashboard = () => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Cost Structure</h3>
               <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">BT Staff Rate ($/hour)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={staffRates.bt}
-                    onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Number of BT Staff</label>
+                    <input
+                      type="number"
+                      value={staffCount.bt}
+                      onChange={(e) => setStaffCount({...staffCount, bt: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">BT Rate ($/hour)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={staffRates.bt}
+                      onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Staff Rate ($/hour)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={staffRates.bcba}
-                    onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
-                    className="w-full border rounded px-3 py-2"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Number of BCBA Staff</label>
+                    <input
+                      type="number"
+                      value={staffCount.bcba}
+                      onChange={(e) => setStaffCount({...staffCount, bcba: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Rate ($/hour)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={staffRates.bcba}
+                      onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rent</label>
@@ -563,6 +597,62 @@ const TreehouseFinancialDashboard = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          
+          {/* Revenue Aggregation */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-4">Forecast Period Summary</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-sm text-gray-600 font-medium">Total Revenue</p>
+                <p className="text-xl font-bold text-purple-700">
+                  {formatCurrency(
+                    currentMetrics.totalRevenue + 
+                    forecast.reduce((sum, month) => sum + month.revenue, 0)
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Current + {forecastMonths} months
+                </p>
+              </div>
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-sm text-gray-600 font-medium">Total Expenses</p>
+                <p className="text-xl font-bold text-red-700">
+                  {formatCurrency(
+                    currentMetrics.totalExpenses + 
+                    forecast.reduce((sum, month) => sum + month.expenses, 0)
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Current + {forecastMonths} months
+                </p>
+              </div>
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-sm text-gray-600 font-medium">Total Net Profit</p>
+                <p className="text-xl font-bold text-green-700">
+                  {formatCurrency(
+                    currentMetrics.netProfit + 
+                    forecast.reduce((sum, month) => sum + month.profit, 0)
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Current + {forecastMonths} months
+                </p>
+              </div>
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-sm text-gray-600 font-medium">Average Monthly Revenue</p>
+                <p className="text-xl font-bold text-blue-700">
+                  {formatCurrency(
+                    (currentMetrics.totalRevenue + 
+                    forecast.reduce((sum, month) => sum + month.revenue, 0)) / 
+                    (forecastMonths + 1)
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Over {forecastMonths + 1} months
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
