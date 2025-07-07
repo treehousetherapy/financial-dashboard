@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Download, Edit3, TrendingUp, DollarSign, Clock, Users, BarChart3 } from 'lucide-react';
+import { Download, Edit3, TrendingUp, DollarSign, Clock, Users } from 'lucide-react';
 
 const TreehouseFinancialDashboard = () => {
   const [editMode, setEditMode] = useState(false);
-  const [forecastMonths, setForecastMonths] = useState(6);
   
   // Core editable data
   const [clientData, setClientData] = useState([
@@ -218,6 +217,83 @@ const TreehouseFinancialDashboard = () => {
           </div>
         </div>
 
+        {/* Financial Settings */}
+        {editMode && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Service Rates</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Direct Therapy Rate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={serviceRates.directTherapy}
+                    onChange={(e) => setServiceRates({...serviceRates, directTherapy: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supervision Rate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={serviceRates.supervision}
+                    onChange={(e) => setServiceRates({...serviceRates, supervision: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Cost Structure</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">BT Staff Rate ($/hour)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={staffRates.bt}
+                    onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Staff Rate ($/hour)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={staffRates.bcba}
+                    onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rent</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={overheadCosts.rent}
+                    onChange={(e) => setOverheadCosts({...overheadCosts, rent: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Other Overhead</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={overheadCosts.other}
+                    onChange={(e) => setOverheadCosts({...overheadCosts, other: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Client Management */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -312,6 +388,35 @@ const TreehouseFinancialDashboard = () => {
             </table>
           </div>
         </div>
+
+        {/* Growth Assumptions */}
+        {editMode && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Growth Assumptions</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service Distribution - Direct Therapy (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={serviceDistribution.directTherapy * 100}
+                  onChange={(e) => setServiceDistribution({...serviceDistribution, directTherapy: (parseFloat(e.target.value) || 0) / 100})}
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Clients Per Month</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={growthAssumptions.newClientsPerMonth}
+                  onChange={(e) => setGrowthAssumptions({...growthAssumptions, newClientsPerMonth: parseFloat(e.target.value) || 0})}
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Performance Metrics */}
         <div className="bg-white rounded-xl shadow-lg p-6">
