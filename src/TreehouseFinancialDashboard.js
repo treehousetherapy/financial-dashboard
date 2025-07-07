@@ -63,7 +63,7 @@ const TreehouseFinancialDashboard = () => {
     const directTherapyRevenue = directTherapyHours * serviceRates.directTherapy;
     const supervisionRevenue = supervisionHours * serviceRates.supervision;
     const familyTrainingRevenue = familyTrainingHours * serviceRates.familyTraining;
-    const itpRevenue = activeClients.length * 16; // Fixed amount per client
+    const itpRevenue = activeClients.length * serviceRates.itp; // ITP rate per client
     const totalRevenue = directTherapyRevenue + supervisionRevenue + familyTrainingRevenue + itpRevenue;
     
     // Expense calculation
