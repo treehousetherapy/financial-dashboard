@@ -42,11 +42,7 @@ const TreehouseFinancialDashboard = () => {
     costInflationAnnual: 0.025
   });
 
-  // Staff count state
-  const [staffCount, setStaffCount] = useState({
-    bt: 3,
-    bcba: 1
-  });
+
 
   // Calculated values
   const calculateMetrics = () => {
@@ -67,15 +63,11 @@ const TreehouseFinancialDashboard = () => {
     const totalRevenue = directTherapyRevenue + supervisionRevenue + familyTrainingRevenue + itpRevenue;
     
     // Expense calculation
-    // Calculate monthly salary costs based on full-time hours (173.33 hours/month) and staff count
-    const btMonthlySalary = staffRates.bt * 173.33 * staffCount.bt;
-    const bcbaMonthlySalary = staffRates.bcba * 173.33 * staffCount.bcba;
-    const totalStaffCost = btMonthlySalary + bcbaMonthlySalary;
+    // Calculate staff costs based on actual service hours worked
+    const btStaffCost = directTherapyHours * staffRates.bt;
+    const bcbaStaffCost = (supervisionHours + familyTrainingHours) * staffRates.bcba;
+    const totalStaffCost = btStaffCost + bcbaStaffCost;
     const totalExpenses = totalStaffCost + overheadCosts.rent + overheadCosts.other;
-    
-    // Keep individual cost tracking for reporting
-    const btStaffCost = btMonthlySalary;
-    const bcbaStaffCost = bcbaMonthlySalary;
     
     // Profit calculation
     const netProfit = totalRevenue - totalExpenses;
@@ -177,7 +169,6 @@ const TreehouseFinancialDashboard = () => {
       clientData,
       serviceRates,
       staffRates,
-      staffCount,
       overheadCosts,
       serviceDistribution,
       growthAssumptions
@@ -203,7 +194,7 @@ const TreehouseFinancialDashboard = () => {
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <img 
-                src="/treehouse-logo.png" 
+                src="/treehouse-logo.png.png" 
                 alt="Treehouse Therapy Center" 
                 className="h-16 w-16 object-contain"
                 onError={(e) => {
@@ -433,47 +424,25 @@ const TreehouseFinancialDashboard = () => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Cost Structure</h3>
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Number of BT Staff</label>
-                    <input
-                      type="number"
-                      value={staffCount.bt}
-                      onChange={(e) => setStaffCount({...staffCount, bt: parseInt(e.target.value) || 0})}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">BT Rate ($/hour)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={staffRates.bt}
-                      onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">BT Staff Rate ($/hour)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={staffRates.bt}
+                    onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Number of BCBA Staff</label>
-                    <input
-                      type="number"
-                      value={staffCount.bcba}
-                      onChange={(e) => setStaffCount({...staffCount, bcba: parseInt(e.target.value) || 0})}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Rate ($/hour)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={staffRates.bcba}
-                      onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Staff Rate ($/hour)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={staffRates.bcba}
+                    onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
+                    className="w-full border rounded px-3 py-2"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rent</label>
