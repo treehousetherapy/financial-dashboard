@@ -201,9 +201,23 @@ const TreehouseFinancialDashboard = () => {
         {/* Header */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Treehouse Therapy Center LLC</h1>
-              <p className="text-gray-600 mt-1">Dynamic Financial Analysis & Forecasting Dashboard</p>
+            <div className="flex items-center gap-4">
+              <img 
+                src="/treehouse-logo.png" 
+                alt="Treehouse Therapy Center" 
+                className="h-16 w-16 object-contain"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              <div className="h-16 w-16 bg-gradient-to-br from-teal-500 to-orange-500 rounded-lg flex items-center justify-center" style={{display: 'none'}}>
+                <span className="text-white font-bold text-2xl">TT</span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Treehouse Therapy Center LLC</h1>
+                <p className="text-gray-600 mt-1">Dynamic Financial Analysis & Forecasting Dashboard</p>
+              </div>
             </div>
             <div className="flex gap-3">
               <button
