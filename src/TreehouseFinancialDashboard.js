@@ -436,7 +436,7 @@ const TreehouseFinancialDashboard = () => {
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <img 
-                src="/logo-test.svg" 
+                src="/treehouse-logo-final.png" 
                 alt="Treehouse Therapy Center" 
                 className="h-16 w-16 object-contain"
                 onError={(e) => {
