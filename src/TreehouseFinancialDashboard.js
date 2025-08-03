@@ -60,28 +60,30 @@ const TreehouseFinancialDashboard = () => {
     const supervisionHours = totalMonthlyHours * serviceDistribution.supervision;
     const familyTrainingHours = totalMonthlyHours * serviceDistribution.familyTraining;
     
-    // Revenue calculation
-    const directTherapyRevenue = directTherapyHours * serviceRates.directTherapy;
-    const supervisionRevenue = supervisionHours * serviceRates.supervision;
-    const familyTrainingRevenue = familyTrainingHours * serviceRates.familyTraining;
-    const itpRevenue = activeClients.length * serviceRates.itp; // ITP rate per client
+    // Revenue calculation - handle empty string values
+    const directTherapyRevenue = directTherapyHours * (parseFloat(serviceRates.directTherapy) || 0);
+    const supervisionRevenue = supervisionHours * (parseFloat(serviceRates.supervision) || 0);
+    const familyTrainingRevenue = familyTrainingHours * (parseFloat(serviceRates.familyTraining) || 0);
+    const itpRevenue = activeClients.length * (parseFloat(serviceRates.itp) || 0); // ITP rate per client
     const totalRevenue = directTherapyRevenue + supervisionRevenue + familyTrainingRevenue + itpRevenue;
     
-    // Expense calculation
+    // Expense calculation - handle empty string values
     // BT staff costs: Base salary model (they need minimum guaranteed hours)
-    const btMonthlyCapacity = staffCount.bt * 130; // 130 hours/month capacity per BT
-    const btBaseCost = staffCount.bt * staffRates.bt * 80; // 80 guaranteed hours per BT
+    const btCount = parseInt(staffCount.bt) || 1;
+    const bcbaCount = parseInt(staffCount.bcba) || 1;
+    const btMonthlyCapacity = btCount * 130; // 130 hours/month capacity per BT
+    const btBaseCost = btCount * (parseFloat(staffRates.bt) || 0) * 80; // 80 guaranteed hours per BT
     const btOvertimeCost = directTherapyHours > btMonthlyCapacity ? 
-      (directTherapyHours - btMonthlyCapacity) * staffRates.bt * 1.5 : 0;
+      (directTherapyHours - btMonthlyCapacity) * (parseFloat(staffRates.bt) || 0) * 1.5 : 0;
     const btStaffCost = btBaseCost + btOvertimeCost;
     
     // BCBA staff costs: Function-based (supervision + family training + admin overhead)
     const bcbaDirectServiceHours = supervisionHours + familyTrainingHours;
     const bcbaAdminTime = bcbaDirectServiceHours * 0.25; // 25% admin time for documentation, planning
     const bcbaTotalHours = bcbaDirectServiceHours + bcbaAdminTime;
-    const bcbaStaffCost = bcbaTotalHours * staffRates.bcba;
+    const bcbaStaffCost = bcbaTotalHours * (parseFloat(staffRates.bcba) || 0);
     const totalStaffCost = btStaffCost + bcbaStaffCost;
-    const totalExpenses = totalStaffCost + overheadCosts.rent + overheadCosts.other;
+    const totalExpenses = totalStaffCost + (parseFloat(overheadCosts.rent) || 0) + (parseFloat(overheadCosts.other) || 0);
     
     // Profit calculation
     const netProfit = totalRevenue - totalExpenses;
@@ -109,9 +111,9 @@ const TreehouseFinancialDashboard = () => {
       costPerHour: totalMonthlyHours > 0 ? totalExpenses / totalMonthlyHours : 0,
       profitPerHour: totalMonthlyHours > 0 ? netProfit / totalMonthlyHours : 0,
       btCapacity: btMonthlyCapacity,
-      bcbaCapacity: staffCount.bcba * 100, // 100 hours/month realistic BCBA capacity
+      bcbaCapacity: bcbaCount * 100, // 100 hours/month realistic BCBA capacity
       btUtilization: btMonthlyCapacity > 0 ? (directTherapyHours / btMonthlyCapacity) * 100 : 0,
-      bcbaUtilization: staffCount.bcba > 0 ? (bcbaTotalHours / (staffCount.bcba * 100)) * 100 : 0,
+      bcbaUtilization: bcbaCount > 0 ? (bcbaTotalHours / (bcbaCount * 100)) * 100 : 0,
       bcbaDirectHours: bcbaDirectServiceHours,
       bcbaAdminHours: bcbaAdminTime,
       bcbaTotalHours: bcbaTotalHours
@@ -458,7 +460,8 @@ const TreehouseFinancialDashboard = () => {
                           <input
                             type="number"
                             value={client.weeklyHours}
-                            onChange={(e) => updateClientData(client.id, 'weeklyHours', parseInt(e.target.value) || 0)}
+                            onChange={(e) => updateClientData(client.id, 'weeklyHours', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                            placeholder="Hours per week"
                             className="border rounded px-2 py-1 w-20 text-center"
                           />
                         ) : (
@@ -515,8 +518,9 @@ const TreehouseFinancialDashboard = () => {
                     type="number"
                     step="0.01"
                     value={serviceRates.directTherapy}
-                    onChange={(e) => setServiceRates({...serviceRates, directTherapy: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setServiceRates({...serviceRates, directTherapy: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
                     className="w-full border rounded px-3 py-2"
+                    placeholder="Enter rate per hour"
                   />
                 </div>
                 <div>
@@ -525,8 +529,9 @@ const TreehouseFinancialDashboard = () => {
                     type="number"
                     step="0.01"
                     value={serviceRates.supervision}
-                    onChange={(e) => setServiceRates({...serviceRates, supervision: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setServiceRates({...serviceRates, supervision: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
                     className="w-full border rounded px-3 py-2"
+                    placeholder="Enter rate per hour"
                   />
                 </div>
                 <div>
@@ -535,8 +540,9 @@ const TreehouseFinancialDashboard = () => {
                     type="number"
                     step="0.01"
                     value={serviceRates.familyTraining}
-                    onChange={(e) => setServiceRates({...serviceRates, familyTraining: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setServiceRates({...serviceRates, familyTraining: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
                     className="w-full border rounded px-3 py-2"
+                    placeholder="Enter rate per hour"
                   />
                 </div>
                 <div>
@@ -545,7 +551,8 @@ const TreehouseFinancialDashboard = () => {
                     type="number"
                     step="0.01"
                     value={serviceRates.itp}
-                    onChange={(e) => setServiceRates({...serviceRates, itp: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setServiceRates({...serviceRates, itp: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
+                    placeholder="Enter ITP rate"
                     className="w-full border rounded px-3 py-2"
                   />
                 </div>
@@ -562,10 +569,11 @@ const TreehouseFinancialDashboard = () => {
                       type="number"
                       min="1"
                       value={staffCount.bt}
-                      onChange={(e) => setStaffCount({...staffCount, bt: parseInt(e.target.value) || 1})}
+                      onChange={(e) => setStaffCount({...staffCount, bt: e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1)})}
+                      placeholder="Number of BT staff"
                       className="w-full border rounded px-3 py-2"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Capacity: {staffCount.bt * 130}h/month</p>
+                    <p className="text-xs text-gray-500 mt-1">Capacity: {(parseInt(staffCount.bt) || 1) * 130}h/month</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">BT Rate ($/hour)</label>
@@ -573,7 +581,8 @@ const TreehouseFinancialDashboard = () => {
                       type="number"
                       step="0.01"
                       value={staffRates.bt}
-                      onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
+                      onChange={(e) => setStaffRates({...staffRates, bt: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
+                      placeholder="Enter hourly rate"
                       className="w-full border rounded px-3 py-2"
                     />
                   </div>
@@ -585,10 +594,11 @@ const TreehouseFinancialDashboard = () => {
                       type="number"
                       min="1"
                       value={staffCount.bcba}
-                      onChange={(e) => setStaffCount({...staffCount, bcba: parseInt(e.target.value) || 1})}
+                      onChange={(e) => setStaffCount({...staffCount, bcba: e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1)})}
+                      placeholder="Number of BCBA staff"
                       className="w-full border rounded px-3 py-2"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Capacity: {staffCount.bcba * 100}h/month</p>
+                    <p className="text-xs text-gray-500 mt-1">Capacity: {(parseInt(staffCount.bcba) || 1) * 100}h/month</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">BCBA Rate ($/hour)</label>
@@ -596,7 +606,8 @@ const TreehouseFinancialDashboard = () => {
                       type="number"
                       step="0.01"
                       value={staffRates.bcba}
-                      onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
+                      onChange={(e) => setStaffRates({...staffRates, bcba: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
+                      placeholder="Enter hourly rate"
                       className="w-full border rounded px-3 py-2"
                     />
                   </div>
@@ -607,7 +618,8 @@ const TreehouseFinancialDashboard = () => {
                     type="number"
                     step="0.01"
                     value={overheadCosts.rent}
-                    onChange={(e) => setOverheadCosts({...overheadCosts, rent: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setOverheadCosts({...overheadCosts, rent: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
+                    placeholder="Enter monthly rent"
                     className="w-full border rounded px-3 py-2"
                   />
                 </div>
@@ -617,7 +629,8 @@ const TreehouseFinancialDashboard = () => {
                     type="number"
                     step="0.01"
                     value={overheadCosts.other}
-                    onChange={(e) => setOverheadCosts({...overheadCosts, other: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setOverheadCosts({...overheadCosts, other: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
+                    placeholder="Enter other monthly costs"
                     className="w-full border rounded px-3 py-2"
                   />
                 </div>
@@ -658,7 +671,8 @@ const TreehouseFinancialDashboard = () => {
                       type="number"
                       step="0.1"
                       value={growthAssumptions.newClientsPerMonth}
-                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, newClientsPerMonth: parseFloat(e.target.value) || 0})}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, newClientsPerMonth: e.target.value === '' ? '' : parseFloat(e.target.value) || 0})}
+                    placeholder="New clients per month"
                       className="w-full border rounded px-2 py-1 text-sm"
                     />
                   </div>
@@ -667,7 +681,8 @@ const TreehouseFinancialDashboard = () => {
                     <input
                       type="number"
                       value={growthAssumptions.averageNewClientHours}
-                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, averageNewClientHours: parseInt(e.target.value) || 0})}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, averageNewClientHours: e.target.value === '' ? '' : parseInt(e.target.value) || 0})}
+                    placeholder="Average hours for new clients"
                       className="w-full border rounded px-2 py-1 text-sm"
                     />
                   </div>
@@ -682,7 +697,8 @@ const TreehouseFinancialDashboard = () => {
                       type="number"
                       step="0.01"
                       value={growthAssumptions.rateIncreaseAnnual * 100}
-                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, rateIncreaseAnnual: (parseFloat(e.target.value) || 0) / 100})}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, rateIncreaseAnnual: e.target.value === '' ? 0 : (parseFloat(e.target.value) || 0) / 100})}
+                    placeholder="Annual rate increase %"
                       className="w-full border rounded px-2 py-1 text-sm"
                     />
                   </div>
@@ -692,7 +708,8 @@ const TreehouseFinancialDashboard = () => {
                       type="number"
                       step="0.01"
                       value={growthAssumptions.costInflationAnnual * 100}
-                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, costInflationAnnual: (parseFloat(e.target.value) || 0) / 100})}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, costInflationAnnual: e.target.value === '' ? 0 : (parseFloat(e.target.value) || 0) / 100})}
+                    placeholder="Annual cost inflation %"
                       className="w-full border rounded px-2 py-1 text-sm"
                     />
                   </div>
