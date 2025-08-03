@@ -14,10 +14,10 @@ const TreehouseFinancialDashboard = () => {
   ]);
   
   const [serviceRates, setServiceRates] = useState({
-    directTherapy: 80.68,
-    supervision: 80.68,
-    familyTraining: 80.68,
-    itp: 94.80
+    directTherapy: 140.00, // 97153: ABA Individual Therapy ($35.00 per 15 min × 4)
+    supervision: 140.00,    // 97155: Observation & Direction ($35.00 per 15 min × 4)
+    familyTraining: 140.00, // 97156: Family/Caregiver Training ($35.00 per 15 min × 4)
+    itp: 165.00            // H0032: ITP ($165.00 flat rate)
   });
   
   const [staffRates, setStaffRates] = useState({
