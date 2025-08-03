@@ -167,6 +167,7 @@ const TreehouseFinancialDashboard = () => {
   // Main financial calculations
   const calculateMetrics = () => {
     const activeClients = clientData.filter(client => client.active);
+    // Cap hours at 25 per client for MHCP billing compliance (users can enter higher for scenario planning)
     const totalWeeklyHours = activeClients.reduce((sum, client) => sum + Math.min(client.weeklyHours, 25), 0);
     const totalMonthlyHours = totalWeeklyHours * 4.33;
     
@@ -864,14 +865,15 @@ const TreehouseFinancialDashboard = () => {
                         {editMode ? (
                           <input
                             type="number"
-                            max="25"
-                            value={client.weeklyHours}
-                            onChange={(e) => updateClientData(client.id, 'weeklyHours', Math.min(25, parseInt(e.target.value) || 0))}
-                            className={`border rounded px-2 py-1 w-20 text-center ${client.weeklyHours > 25 ? 'border-red-300' : ''}`}
+                            min="0"
+                            placeholder="Weekly hours"
+                            value={client.weeklyHours === '' ? '' : client.weeklyHours}
+                            onChange={(e) => updateClientData(client.id, 'weeklyHours', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                            className={`border rounded px-2 py-1 w-20 text-center ${client.weeklyHours > 25 ? 'border-red-300 bg-red-50' : ''}`}
                           />
                         ) : (
-                          <span className={client.weeklyHours > 25 ? 'text-red-600' : ''}>
-                            {client.weeklyHours}h
+                          <span className={client.weeklyHours > 25 ? 'text-red-600 font-semibold' : ''}>
+                            {client.weeklyHours}h{client.weeklyHours > 25 ? ' ⚠️' : ''}
                           </span>
                         )}
                       </td>
@@ -879,9 +881,11 @@ const TreehouseFinancialDashboard = () => {
                         {editMode ? (
                           <input
                             type="number"
-                            max="20"
-                            value={client.age}
-                            onChange={(e) => updateClientData(client.id, 'age', Math.min(20, parseInt(e.target.value) || 8))}
+                            min="0"
+                            max="21"
+                            placeholder="Age"
+                            value={client.age === '' ? '' : client.age}
+                            onChange={(e) => updateClientData(client.id, 'age', e.target.value === '' ? '' : parseInt(e.target.value) || 8)}
                             className="border rounded px-2 py-1 w-16 text-center"
                           />
                         ) : (
@@ -892,9 +896,11 @@ const TreehouseFinancialDashboard = () => {
                         {editMode ? (
                           <input
                             type="number"
+                            min="0"
                             max="37800"
-                            value={client.annualUsed || 0}
-                            onChange={(e) => updateClientData(client.id, 'annualUsed', Math.min(37800, parseInt(e.target.value) || 0))}
+                            placeholder="Annual used"
+                            value={client.annualUsed === '' || client.annualUsed === undefined ? '' : client.annualUsed}
+                            onChange={(e) => updateClientData(client.id, 'annualUsed', e.target.value === '' ? 0 : Math.min(37800, parseInt(e.target.value) || 0))}
                             className="border rounded px-2 py-1 w-24 text-center text-xs"
                           />
                         ) : (
