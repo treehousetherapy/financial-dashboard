@@ -12,29 +12,41 @@ const TreehouseFinancialDashboard = () => {
     { id: 3, name: 'Client 3', weeklyHours: 20, active: true, age: 6, annualUsed: 15600 }
   ]);
   
-  // ACCURATE MHCP SERVICE RATES - Based on $54/hour base with provider tiers
+  // OFFICIAL MHCP SERVICE RATES - From MN DHS EIDBI Billing Grid Nov 2024
   const [serviceRates, setServiceRates] = useState({
-    // Base rates at 100% reimbursement (QSP/Level I) - $13.50 per 15-min unit
-    directTherapy: 54.00,        // 97153: Individual ABA - $13.50 × 4 units/hour
-    groupTherapy: 54.00,         // 97154: Group ABA - $13.50 × 4 units/hour  
-    supervision: 54.00,          // 97155: Protocol Modification - $13.50 × 4 units/hour
-    familyTraining: 54.00,       // 97156: Family Guidance - $13.50 × 4 units/hour
-    familyGroup: 54.00,          // 97157: Multiple-Family Group - $13.50 × 4 units/hour
-    assessment: 54.00,           // 97151: Behavior Assessment - $13.50 × 4 units/hour
-    travelTime: 13.50,           // H0046: Travel - actual hourly rate varies
+    // Per 15-minute unit rates
+    cmde: 50.11,                // 97151: CMDE per 15 Minutes
+    directTherapy: 20.17,       // 97153: ABA Individual Therapy per 15 Minutes  
+    groupTherapy: 6.72,         // 97154: ABA Group per 15 Minutes
+    supervision: 20.17,         // 97155: Observation & Direction per 15 Minutes
+    familyTraining: 20.17,      // 97156: Family/Caregiver Training per 15 Minutes
+    familyGroup: 6.72,          // 97157: Family Training Group per 15 Minutes
     
-    // Provider tier multipliers
-    level1Multiplier: 1.00,      // 100% - QSP/Level I
-    level2Multiplier: 0.80,      // 80% - Level II  
-    level3Multiplier: 0.50       // 50% - Level III (97153, 97154 only)
+    // Per encounter rates
+    itp: 94.80,                 // H0032: ITP per encounter
+    coordinatedCare: 174.22,    // T1024: Coordinated Care Conference per encounter
+    
+    // Per minute rate
+    travelTime: 0.52            // H0046: Travel Time per minute
   });
   
-  // Staff configuration with provider levels
+  // Service frequency and duration assumptions
+  const [serviceSettings, setServiceSettings] = useState({
+    // How often services occur (per month)
+    itpFrequency: 1,            // ITP sessions per month per client
+    coordinatedCareFrequency: 0.5, // Coordinated care conferences per month per client
+    
+    // Average session durations for encounter-based services
+    avgItpDuration: 90,         // Average ITP session length in minutes
+    avgCoordinatedCareDuration: 60, // Average coordinated care session length in minutes
+    
+    // Travel assumptions
+    avgTravelPerSession: 15     // Average travel time per session in minutes
+  });
+  
   const [staffRates, setStaffRates] = useState({
-    btLevel2: 22,               // Level II BT - 80% reimbursement
-    btLevel3: 18,               // Level III BT - 50% reimbursement  
-    bcbaLevel1: 45,             // Level I BCBA - 100% reimbursement
-    qsp: 55                     // Qualified Supervising Professional
+    bt: 25,
+    bcba: 47
   });
   
   const [overheadCosts, setOverheadCosts] = useState({
@@ -44,50 +56,101 @@ const TreehouseFinancialDashboard = () => {
     other: 500
   });
   
-  // Service distribution with MHCP compliance limits
+  // Service distribution for time-based services only
   const [serviceDistribution, setServiceDistribution] = useState({
-    directTherapy: 0.75,         // 75% - 97153 (max 8h/day, 25h/week)
-    groupTherapy: 0.05,          // 5% - 97154 (max 4.5h/day)
-    supervision: 0.12,           // 12% - 97155 (max 6h/day)
-    familyTraining: 0.06,        // 6% - 97156 (max 4h/day)
-    familyGroup: 0.01,           // 1% - 97157 (max 4h/day)
-    assessment: 0.01,            // 1% - 97151 (80 units/year max)
-    travelTime: 0.00            // 0% - H0046 (minimize)
-  });
-  
-  // Staff mix by provider level
-  const [staffMix, setStaffMix] = useState({
-    level1Percentage: 0.30,      // 30% Level I/QSP staff
-    level2Percentage: 0.50,      // 50% Level II staff
-    level3Percentage: 0.20       // 20% Level III staff
+    directTherapy: 0.70,         // 70% - Core ABA service (97153)
+    supervision: 0.15,           // 15% - BCBA supervision (97155)
+    familyTraining: 0.08,        // 8% - Family training (97156)
+    groupTherapy: 0.04,          // 4% - Group ABA (97154)
+    familyGroup: 0.02,           // 2% - Family group (97157)
+    cmde: 0.01                   // 1% - Assessments (97151)
+    // Note: ITP, Coordinated Care, and Travel are calculated separately as encounter/frequency-based
   });
   
   const [growthAssumptions, setGrowthAssumptions] = useState({
     newClientsPerMonth: 0.5,
     averageNewClientHours: 15,
-    rateIncreaseAnnual: 0.03,    // MHCP annual indexing
+    rateIncreaseAnnual: 0.03,
     costInflationAnnual: 0.025
   });
 
   // Staff management state
   const [staffCount, setStaffCount] = useState({
-    btTotal: 3,
-    bcba: 1,
-    qsp: 1
+    bt: 2,
+    bcba: 1
   });
+
+  // Calculate revenue correctly based on billing units
+  const calculateServiceRevenue = (hours, clients) => {
+    // Time-based services (per 15-minute unit)
+    const directTherapyHours = hours * serviceDistribution.directTherapy;
+    const supervisionHours = hours * serviceDistribution.supervision;
+    const familyTrainingHours = hours * serviceDistribution.familyTraining;
+    const groupTherapyHours = hours * serviceDistribution.groupTherapy;
+    const familyGroupHours = hours * serviceDistribution.familyGroup;
+    const cmdeHours = hours * serviceDistribution.cmde;
+    
+    // Convert hours to 15-minute units and calculate revenue
+    const directTherapyRevenue = directTherapyHours * 4 * serviceRates.directTherapy;
+    const supervisionRevenue = supervisionHours * 4 * serviceRates.supervision;
+    const familyTrainingRevenue = familyTrainingHours * 4 * serviceRates.familyTraining;
+    const groupTherapyRevenue = groupTherapyHours * 4 * serviceRates.groupTherapy;
+    const familyGroupRevenue = familyGroupHours * 4 * serviceRates.familyGroup;
+    const cmdeRevenue = cmdeHours * 4 * serviceRates.cmde;
+    
+    // Encounter-based services (per session regardless of length)
+    const itpSessions = clients * serviceSettings.itpFrequency;
+    const coordinatedCareSessions = clients * serviceSettings.coordinatedCareFrequency;
+    const itpRevenue = itpSessions * serviceRates.itp;
+    const coordinatedCareRevenue = coordinatedCareSessions * serviceRates.coordinatedCare;
+    
+    // Travel time (per minute)
+    const totalSessions = (directTherapyHours + supervisionHours + familyTrainingHours + 
+                          groupTherapyHours + familyGroupHours + cmdeHours) / 1.5 + // Assume 1.5 hour avg session
+                          itpSessions + coordinatedCareSessions;
+    const totalTravelMinutes = totalSessions * serviceSettings.avgTravelPerSession;
+    const travelRevenue = totalTravelMinutes * serviceRates.travelTime;
+    
+    return {
+      // Time-based service hours
+      directTherapyHours,
+      supervisionHours,
+      familyTrainingHours,
+      groupTherapyHours,
+      familyGroupHours,
+      cmdeHours,
+      
+      // Time-based revenue
+      directTherapyRevenue,
+      supervisionRevenue,
+      familyTrainingRevenue,
+      groupTherapyRevenue,
+      familyGroupRevenue,
+      cmdeRevenue,
+      
+      // Encounter-based
+      itpSessions,
+      coordinatedCareSessions,
+      itpRevenue,
+      coordinatedCareRevenue,
+      
+      // Travel
+      totalTravelMinutes,
+      travelRevenue,
+      
+      // Totals
+      totalTimeBasedHours: directTherapyHours + supervisionHours + familyTrainingHours + 
+                          groupTherapyHours + familyGroupHours + cmdeHours,
+      totalRevenue: directTherapyRevenue + supervisionRevenue + familyTrainingRevenue + 
+                   groupTherapyRevenue + familyGroupRevenue + cmdeRevenue + 
+                   itpRevenue + coordinatedCareRevenue + travelRevenue
+    };
+  };
 
   // MHCP compliance calculations
   const calculateMHCPCompliance = (client) => {
-    const ANNUAL_CAP = 37800;    // $37,800 per beneficiary annually
-    const WEEKLY_HOUR_LIMIT = 25; // 25 hours max per week
-    const DAILY_LIMITS = {
-      directTherapy: 8,          // 8 hours daily max
-      groupTherapy: 4.5,         // 4.5 hours daily max
-      supervision: 6,            // 6 hours daily max
-      familyTraining: 4,         // 4 hours daily max
-      familyGroup: 4,            // 4 hours daily max
-      assessment: 80 / 52        // 80 units annually ÷ 52 weeks
-    };
+    const ANNUAL_CAP = 37800;
+    const WEEKLY_HOUR_LIMIT = 25;
     
     const weeklyHoursCompliant = client.weeklyHours <= WEEKLY_HOUR_LIMIT;
     const annualCapRemaining = ANNUAL_CAP - (client.annualUsed || 0);
@@ -97,112 +160,44 @@ const TreehouseFinancialDashboard = () => {
       weeklyHoursCompliant,
       annualCapRemaining,
       canContinueServices,
-      weeklyLimit: WEEKLY_HOUR_LIMIT,
-      dailyLimits: DAILY_LIMITS
+      weeklyLimit: WEEKLY_HOUR_LIMIT
     };
   };
 
-  // Calculate weighted reimbursement rates based on staff mix
-  const calculateWeightedRates = () => {
-    const weightedMultiplier = (
-      staffMix.level1Percentage * serviceRates.level1Multiplier +
-      staffMix.level2Percentage * serviceRates.level2Multiplier +
-      staffMix.level3Percentage * serviceRates.level3Multiplier
-    );
-    
-    return {
-      directTherapy: serviceRates.directTherapy * weightedMultiplier,
-      groupTherapy: serviceRates.groupTherapy * weightedMultiplier,
-      supervision: serviceRates.supervision * serviceRates.level1Multiplier, // BCBA only
-      familyTraining: serviceRates.familyTraining * serviceRates.level1Multiplier, // BCBA only
-      familyGroup: serviceRates.familyGroup * serviceRates.level1Multiplier, // BCBA only
-      assessment: serviceRates.assessment * serviceRates.level1Multiplier, // QSP only
-      travelTime: serviceRates.travelTime
-    };
-  };
-
-  // Main financial calculations with MHCP accuracy
+  // Main financial calculations
   const calculateMetrics = () => {
     const activeClients = clientData.filter(client => client.active);
-    const totalWeeklyHours = activeClients.reduce((sum, client) => sum + Math.min(client.weeklyHours, 25), 0); // MHCP 25h limit
-    const totalMonthlyHours = totalWeeklyHours * 4.33; // Average weeks per month
+    const totalWeeklyHours = activeClients.reduce((sum, client) => sum + Math.min(client.weeklyHours, 25), 0);
+    const totalMonthlyHours = totalWeeklyHours * 4.33;
     
-    // Check MHCP compliance for all clients
+    // Calculate service revenue with correct billing units
+    const serviceRevenue = calculateServiceRevenue(totalMonthlyHours, activeClients.length);
+    
+    // Check MHCP compliance
     const complianceChecks = activeClients.map(client => ({
       ...client,
       compliance: calculateMHCPCompliance(client)
     }));
     
-    // Service hour breakdown with MHCP limits
-    const directTherapyHours = Math.min(
-      totalMonthlyHours * serviceDistribution.directTherapy,
-      activeClients.length * 8 * 30 // Daily limit × 30 days
-    );
-    const groupTherapyHours = Math.min(
-      totalMonthlyHours * serviceDistribution.groupTherapy,
-      activeClients.length * 4.5 * 30
-    );
-    const supervisionHours = Math.min(
-      totalMonthlyHours * serviceDistribution.supervision,
-      activeClients.length * 6 * 30
-    );
-    const familyTrainingHours = Math.min(
-      totalMonthlyHours * serviceDistribution.familyTraining,
-      activeClients.length * 4 * 30
-    );
-    const familyGroupHours = Math.min(
-      totalMonthlyHours * serviceDistribution.familyGroup,
-      activeClients.length * 4 * 30
-    );
-    const assessmentHours = Math.min(
-      totalMonthlyHours * serviceDistribution.assessment,
-      activeClients.length * (80 / 52) * 4.33 / 4 // 80 units/year ÷ 52 weeks × 4.33 weeks ÷ 4 units
-    );
-    const travelHours = totalMonthlyHours * serviceDistribution.travelTime;
-    
-    // Get weighted rates based on staff mix
-    const weightedRates = calculateWeightedRates();
-    
-    // Revenue calculation with accurate MHCP rates
-    const directTherapyRevenue = directTherapyHours * weightedRates.directTherapy;
-    const groupTherapyRevenue = groupTherapyHours * weightedRates.groupTherapy;
-    const supervisionRevenue = supervisionHours * weightedRates.supervision;
-    const familyTrainingRevenue = familyTrainingHours * weightedRates.familyTraining;
-    const familyGroupRevenue = familyGroupHours * weightedRates.familyGroup;
-    const assessmentRevenue = assessmentHours * weightedRates.assessment;
-    const travelRevenue = travelHours * weightedRates.travelTime;
-    
-    const totalRevenue = directTherapyRevenue + groupTherapyRevenue + supervisionRevenue + 
-                        familyTrainingRevenue + familyGroupRevenue + assessmentRevenue + travelRevenue;
-    
-    // Check against annual caps
-    const totalAnnualProjected = totalRevenue * 12;
-    const clientsAtRisk = complianceChecks.filter(c => !c.compliance.canContinueServices).length;
-    
-    // Staff cost calculation with provider levels
-    const totalBTs = parseInt(staffCount.btTotal) || 3;
-    const level2BTs = Math.floor(totalBTs * staffMix.level2Percentage);
-    const level3BTs = Math.floor(totalBTs * staffMix.level3Percentage);
-    const level1BTs = totalBTs - level2BTs - level3BTs;
-    
-    // BT costs by level
-    const btLevel2Cost = level2BTs * (parseFloat(staffRates.btLevel2) || 0) * 130; // 130h capacity
-    const btLevel3Cost = level3BTs * (parseFloat(staffRates.btLevel3) || 0) * 130;
-    const btLevel1Cost = level1BTs * 30 * 130; // Estimated Level I rate
-    const totalBTCost = btLevel2Cost + btLevel3Cost + btLevel1Cost;
-    
-    // BCBA/QSP costs for supervision and assessments
+    // Staff cost calculation
+    const btCount = parseInt(staffCount.bt) || 2;
     const bcbaCount = parseInt(staffCount.bcba) || 1;
-    const qspCount = parseInt(staffCount.qsp) || 1;
-    const bcbaServiceHours = supervisionHours + familyTrainingHours + familyGroupHours;
-    const qspServiceHours = assessmentHours;
-    const bcbaAdminTime = bcbaServiceHours * 0.30; // 30% admin time for MHCP documentation
-    const qspAdminTime = qspServiceHours * 0.25;
+    const btMonthlyCapacity = btCount * 130;
+    const btBaseCost = btCount * (parseFloat(staffRates.bt) || 0) * 80;
+    const btOvertimeCost = serviceRevenue.directTherapyHours > btMonthlyCapacity ? 
+      (serviceRevenue.directTherapyHours - btMonthlyCapacity) * (parseFloat(staffRates.bt) || 0) * 1.5 : 0;
+    const btStaffCost = btBaseCost + btOvertimeCost;
     
-    const bcbaStaffCost = (bcbaServiceHours + bcbaAdminTime) * (parseFloat(staffRates.bcbaLevel1) || 0);
-    const qspStaffCost = (qspServiceHours + qspAdminTime) * (parseFloat(staffRates.qsp) || 0);
+    // BCBA costs for supervision, family training, CMDE, ITP, and coordinated care
+    const bcbaDirectServiceHours = serviceRevenue.supervisionHours + serviceRevenue.familyTrainingHours + 
+                                  serviceRevenue.cmdeHours + 
+                                  (serviceRevenue.itpSessions * serviceSettings.avgItpDuration / 60) +
+                                  (serviceRevenue.coordinatedCareSessions * serviceSettings.avgCoordinatedCareDuration / 60);
+    const bcbaAdminTime = bcbaDirectServiceHours * 0.25;
+    const bcbaTotalHours = bcbaDirectServiceHours + bcbaAdminTime;
+    const bcbaStaffCost = bcbaTotalHours * (parseFloat(staffRates.bcba) || 0);
     
-    const totalStaffCost = totalBTCost + bcbaStaffCost + qspStaffCost;
+    const totalStaffCost = btStaffCost + bcbaStaffCost;
     const totalExpenses = totalStaffCost + 
                          (parseFloat(overheadCosts.rent) || 0) + 
                          (parseFloat(overheadCosts.insurance) || 0) +
@@ -210,92 +205,74 @@ const TreehouseFinancialDashboard = () => {
                          (parseFloat(overheadCosts.other) || 0);
     
     // Profit calculation
-    const netProfit = totalRevenue - totalExpenses;
-    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    const netProfit = serviceRevenue.totalRevenue - totalExpenses;
+    const profitMargin = serviceRevenue.totalRevenue > 0 ? (netProfit / serviceRevenue.totalRevenue) * 100 : 0;
     
-    // Cash flow modeling for MHCP (60-90 day delays + prior auth)
-    const accountsReceivable = totalRevenue * 3.0; // 3 months delay including prior auth
-    const workingCapitalNeeded = totalExpenses * 3.5; // 3.5 months operating expenses
-    const priorAuthDelayRisk = activeClients.length * 0.15; // 15% prior auth delay rate
+    // Calculate effective hourly rates for encounter services
+    const effectiveItpHourlyRate = serviceSettings.avgItpDuration > 0 ? 
+      (serviceRates.itp / (serviceSettings.avgItpDuration / 60)) : 0;
+    const effectiveCoordinatedCareHourlyRate = serviceSettings.avgCoordinatedCareDuration > 0 ? 
+      (serviceRates.coordinatedCare / (serviceSettings.avgCoordinatedCareDuration / 60)) : 0;
     
-    // Service mix efficiency
-    const billableHours = totalMonthlyHours - travelHours;
-    const highValueHours = assessmentHours; // Only assessments are premium rate
-    const lowValueHours = groupTherapyHours + travelHours;
-    const highValuePercentage = totalMonthlyHours > 0 ? (highValueHours / totalMonthlyHours) * 100 : 0;
-    const lowValuePercentage = totalMonthlyHours > 0 ? (lowValueHours / totalMonthlyHours) * 100 : 0;
+    // Service mix analysis
+    const highValueRevenue = serviceRevenue.coordinatedCareRevenue + serviceRevenue.itpRevenue + serviceRevenue.cmdeRevenue;
+    const lowValueRevenue = serviceRevenue.groupTherapyRevenue + serviceRevenue.familyGroupRevenue + serviceRevenue.travelRevenue;
+    const highValuePercentage = serviceRevenue.totalRevenue > 0 ? (highValueRevenue / serviceRevenue.totalRevenue) * 100 : 0;
+    const lowValuePercentage = serviceRevenue.totalRevenue > 0 ? (lowValueRevenue / serviceRevenue.totalRevenue) * 100 : 0;
+    
+    // Cash flow analysis
+    const accountsReceivable = serviceRevenue.totalRevenue * 2.5;
+    const workingCapitalNeeded = totalExpenses * 3;
+    const clientsAtRisk = complianceChecks.filter(c => !c.compliance.canContinueServices).length;
     
     return {
       // Basic metrics
       activeClients: activeClients.length,
       totalWeeklyHours,
       totalMonthlyHours,
-      
-      // MHCP compliance
       complianceChecks,
       clientsAtRisk,
       averageWeeklyHours: activeClients.length > 0 ? totalWeeklyHours / activeClients.length : 0,
       
-      // Service hours breakdown
-      directTherapyHours,
-      groupTherapyHours,
-      supervisionHours,
-      familyTrainingHours,
-      familyGroupHours,
-      assessmentHours,
-      travelHours,
-      billableHours,
+      // Service breakdown (from serviceRevenue)
+      ...serviceRevenue,
       
-      // Revenue breakdown with accurate rates
-      directTherapyRevenue,
-      groupTherapyRevenue,
-      supervisionRevenue,
-      familyTrainingRevenue,
-      familyGroupRevenue,
-      assessmentRevenue,
-      travelRevenue,
-      totalRevenue,
-      weightedRates,
+      // Effective hourly rates for encounter services
+      effectiveItpHourlyRate,
+      effectiveCoordinatedCareHourlyRate,
       
-      // Staff costs by level
-      totalBTCost,
-      btLevel2Cost,
-      btLevel3Cost,
-      btLevel1Cost,
+      // Staff costs
+      btStaffCost,
       bcbaStaffCost,
-      qspStaffCost,
       totalStaffCost,
       totalExpenses,
       
       // Profitability
       netProfit,
       profitMargin,
-      revenuePerHour: totalMonthlyHours > 0 ? totalRevenue / totalMonthlyHours : 0,
+      revenuePerHour: totalMonthlyHours > 0 ? serviceRevenue.totalRevenue / totalMonthlyHours : 0,
       costPerHour: totalMonthlyHours > 0 ? totalExpenses / totalMonthlyHours : 0,
       profitPerHour: totalMonthlyHours > 0 ? netProfit / totalMonthlyHours : 0,
       
-      // Capacity and utilization
-      btCapacity: totalBTs * 130,
+      // Capacity
+      btCapacity: btMonthlyCapacity,
       bcbaCapacity: bcbaCount * 100,
-      qspCapacity: qspCount * 80,
-      btUtilization: totalBTs > 0 ? (directTherapyHours / (totalBTs * 130)) * 100 : 0,
-      bcbaUtilization: bcbaCount > 0 ? ((bcbaServiceHours + bcbaAdminTime) / (bcbaCount * 100)) * 100 : 0,
+      btUtilization: btMonthlyCapacity > 0 ? (serviceRevenue.directTherapyHours / btMonthlyCapacity) * 100 : 0,
+      bcbaUtilization: bcbaCount > 0 ? (bcbaTotalHours / (bcbaCount * 100)) * 100 : 0,
+      bcbaDirectHours: bcbaDirectServiceHours,
+      bcbaAdminHours: bcbaAdminTime,
+      bcbaTotalHours: bcbaTotalHours,
       
       // Service mix efficiency
-      highValueHours,
-      lowValueHours,
+      highValueRevenue,
+      lowValueRevenue,
       highValuePercentage,
       lowValuePercentage,
       
-      // MHCP-specific cash flow
+      // Cash flow
       accountsReceivable,
       workingCapitalNeeded,
-      priorAuthDelayRisk,
-      cashFlowRisk: accountsReceivable > workingCapitalNeeded ? 'High' : 'Moderate',
-      
-      // Annual projections
-      totalAnnualProjected,
-      averageAnnualPerClient: activeClients.length > 0 ? totalAnnualProjected / activeClients.length : 0
+      cashFlowRisk: accountsReceivable > workingCapitalNeeded ? 'High' : 'Moderate'
     };
   };
 
@@ -303,50 +280,38 @@ const TreehouseFinancialDashboard = () => {
   const validateMHCPCompliance = (metrics) => {
     const alerts = [];
     
-    // Weekly hour compliance
     if (metrics.averageWeeklyHours > 25) {
       alerts.push({
         type: 'critical',
-        message: `Average weekly hours (${metrics.averageWeeklyHours.toFixed(1)}) exceeds MHCP 25-hour limit. Risk of claim denials.`
+        message: `Average weekly hours (${metrics.averageWeeklyHours.toFixed(1)}) exceeds MHCP 25-hour limit.`
       });
     }
     
-    // Annual cap warnings
     if (metrics.clientsAtRisk > 0) {
       alerts.push({
         type: 'warning',
-        message: `${metrics.clientsAtRisk} client(s) approaching $37,800 annual cap. Plan service transitions.`
+        message: `${metrics.clientsAtRisk} client(s) approaching $37,800 annual cap.`
       });
     }
     
-    // Revenue per hour sustainability
-    if (metrics.revenuePerHour < 40) {
+    if (metrics.revenuePerHour < 50) {
       alerts.push({
         type: 'critical',
-        message: `Revenue per hour ($${metrics.revenuePerHour.toFixed(2)}) is below $40 MHCP sustainability threshold.`
+        message: `Revenue per hour ($${metrics.revenuePerHour.toFixed(2)}) is below $50 sustainability threshold.`
       });
     }
     
-    // Cash flow risk from prior authorization delays
-    if (metrics.priorAuthDelayRisk > 0.5) {
-      alerts.push({
-        type: 'warning',
-        message: `High prior authorization delay risk. ${metrics.priorAuthDelayRisk.toFixed(0)} clients may experience service interruptions.`
-      });
-    }
-    
-    // Service mix optimization
-    if (metrics.lowValuePercentage > 15) {
+    if (metrics.highValuePercentage < 20) {
       alerts.push({
         type: 'opportunity',
-        message: `Low-value services (${metrics.lowValuePercentage.toFixed(1)}%) exceed 15%. Consider optimizing service mix.`
+        message: `High-value services (${metrics.highValuePercentage.toFixed(1)}%) below 20% target. Increase encounter-based services.`
       });
     }
     
     return alerts;
   };
 
-  // Enhanced break-even for MHCP margins
+  // Enhanced break-even analysis
   const calculateBreakEven = (metrics) => {
     const fixedCosts = (parseFloat(overheadCosts.rent) || 0) + 
                       (parseFloat(overheadCosts.insurance) || 0) +
@@ -366,7 +331,7 @@ const TreehouseFinancialDashboard = () => {
     };
   };
 
-  // Forecast calculation with MHCP constraints
+  // Forecast calculation
   const calculateForecast = () => {
     const currentMetrics = calculateMetrics();
     const forecast = [];
@@ -375,7 +340,7 @@ const TreehouseFinancialDashboard = () => {
       const additionalClients = Math.floor(month * growthAssumptions.newClientsPerMonth);
       const additionalHours = Math.min(
         additionalClients * growthAssumptions.averageNewClientHours,
-        additionalClients * 25 // MHCP weekly limit
+        additionalClients * 25
       );
       const monthlyRateIncrease = Math.pow(1 + growthAssumptions.rateIncreaseAnnual, month / 12);
       const monthlyCostIncrease = Math.pow(1 + growthAssumptions.costInflationAnnual, month / 12);
@@ -389,12 +354,6 @@ const TreehouseFinancialDashboard = () => {
       const projectedProfit = projectedRevenue - projectedExpenses;
       const projectedMargin = projectedRevenue > 0 ? (projectedProfit / projectedRevenue) * 100 : 0;
       
-      // Check annual cap constraints
-      const annualRevenue = projectedRevenue * 12;
-      const avgRevenuePerClient = (currentMetrics.activeClients + additionalClients) > 0 ? 
-        annualRevenue / (currentMetrics.activeClients + additionalClients) : 0;
-      const capConstrained = avgRevenuePerClient > 37800;
-      
       forecast.push({
         month,
         clients: currentMetrics.activeClients + additionalClients,
@@ -402,9 +361,7 @@ const TreehouseFinancialDashboard = () => {
         revenue: projectedRevenue,
         expenses: projectedExpenses,
         profit: projectedProfit,
-        margin: projectedMargin,
-        capConstrained: capConstrained,
-        avgRevenuePerClient: avgRevenuePerClient
+        margin: projectedMargin
       });
     }
     
@@ -448,13 +405,13 @@ const TreehouseFinancialDashboard = () => {
       breakEvenAnalysis,
       clientData,
       serviceRates,
+      serviceSettings,
       staffRates,
       staffCount,
-      staffMix,
       overheadCosts,
       serviceDistribution,
       growthAssumptions,
-      mhcpRatesSource: "MN DHS Official Documentation - $54/hour base rate",
+      officialMHCPSource: "MN DHS EIDBI Billing Grid November 2024",
       lastUpdated: new Date().toISOString()
     };
     
@@ -462,7 +419,7 @@ const TreehouseFinancialDashboard = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'treehouse_mhcp_accurate_analysis.json';
+    a.download = 'treehouse_correct_billing_units_analysis.json';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -491,8 +448,8 @@ const TreehouseFinancialDashboard = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Treehouse Therapy Center LLC</h1>
-                <p className="text-gray-600 mt-1">MHCP Financial Analysis - OFFICIAL MN DHS RATES</p>
-                <p className="text-sm text-green-600 font-medium">✓ $54/hour base rate with provider tier system • ✓ MHCP compliance monitoring</p>
+                <p className="text-gray-600 mt-1">MHCP Financial Analysis - CORRECT BILLING UNITS</p>
+                <p className="text-sm text-green-600 font-medium">✓ Per 15-min unit • ✓ Per encounter • ✓ Per minute billing • ✓ Nov 2024 EIDBI Grid</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -522,8 +479,8 @@ const TreehouseFinancialDashboard = () => {
         {complianceAlerts.length > 0 && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
-              <Shield className="text-red-600" size={20} />
-              <h2 className="text-xl font-bold text-gray-900">MHCP Compliance & Risk Analysis</h2>
+              <AlertTriangle className="text-orange-600" size={20} />
+              <h2 className="text-xl font-bold text-gray-900">MHCP Compliance & Revenue Optimization</h2>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -546,7 +503,7 @@ const TreehouseFinancialDashboard = () => {
           </div>
         )}
 
-        {/* Key Metrics Cards - Updated for MHCP */}
+        {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -564,7 +521,7 @@ const TreehouseFinancialDashboard = () => {
               <div>
                 <p className="text-gray-600 text-sm">Monthly Hours</p>
                 <p className="text-2xl font-bold text-green-600">{Math.round(currentMetrics.totalMonthlyHours)}</p>
-                <p className="text-xs text-gray-500">{Math.round(currentMetrics.billableHours)} billable</p>
+                <p className="text-xs text-gray-500">{Math.round(currentMetrics.totalTimeBasedHours)} billable</p>
               </div>
               <Clock className="text-green-600" size={24} />
             </div>
@@ -575,7 +532,7 @@ const TreehouseFinancialDashboard = () => {
               <div>
                 <p className="text-gray-600 text-sm">Monthly Revenue (MHCP)</p>
                 <p className="text-2xl font-bold text-purple-600">{formatCurrency(currentMetrics.totalRevenue)}</p>
-                <p className="text-xs text-gray-500">{formatCurrency(currentMetrics.revenuePerHour)}/hour</p>
+                <p className="text-xs text-gray-500">{formatCurrency(currentMetrics.revenuePerHour)}/hour avg</p>
               </div>
               <DollarSign className="text-purple-600" size={24} />
             </div>
@@ -595,90 +552,147 @@ const TreehouseFinancialDashboard = () => {
           </div>
         </div>
 
-        {/* MHCP Rate Structure Panel */}
+        {/* Billing Units Explanation Panel */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <Calculator className="text-blue-600" size={20} />
-            <h2 className="text-xl font-bold text-gray-900">MHCP Rate Structure & Provider Mix</h2>
+            <Calculator className="text-purple-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">MHCP Billing Units Breakdown</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">Base Rate (Level I/QSP)</p>
-              <p className="text-lg font-bold text-green-800">{formatCurrency(serviceRates.directTherapy)}/hour</p>
-              <p className="text-xs text-green-600 mt-1">$13.50 per 15-min unit</p>
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600 font-medium">Level II Rate (80%)</p>
-              <p className="text-lg font-bold text-blue-800">{formatCurrency(serviceRates.directTherapy * serviceRates.level2Multiplier)}/hour</p>
-              <p className="text-xs text-blue-600 mt-1">{(staffMix.level2Percentage * 100).toFixed(0)}% of staff</p>
-            </div>
-            
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <p className="text-sm text-yellow-600 font-medium">Level III Rate (50%)</p>
-              <p className="text-lg font-bold text-yellow-800">{formatCurrency(serviceRates.directTherapy * serviceRates.level3Multiplier)}/hour</p>
-              <p className="text-xs text-yellow-600 mt-1">{(staffMix.level3Percentage * 100).toFixed(0)}% of staff</p>
-            </div>
-            
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <p className="text-sm text-purple-600 font-medium">Weighted Average</p>
-              <p className="text-lg font-bold text-purple-800">{formatCurrency(currentMetrics.revenuePerHour)}/hour</p>
-              <p className="text-xs text-purple-600 mt-1">Actual blended rate</p>
-            </div>
-          </div>
-
-          {/* Current Service Distribution with MHCP Limits */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium text-gray-900 mb-3">Service Hours (MHCP Limits Applied)</h3>
+              <h3 className="font-medium text-blue-800 mb-3">Per 15-Minute Unit</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span>Direct Therapy (97153):</span>
-                  <span>{Math.round(currentMetrics.directTherapyHours)}h (max 8h/day)</span>
+                  <span>CMDE (97151):</span>
+                  <span>${serviceRates.cmde} = {formatCurrency(serviceRates.cmde * 4)}/hr</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Group Therapy (97154):</span>
-                  <span>{Math.round(currentMetrics.groupTherapyHours)}h (max 4.5h/day)</span>
+                  <span>ABA Individual (97153):</span>
+                  <span>${serviceRates.directTherapy} = {formatCurrency(serviceRates.directTherapy * 4)}/hr</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ABA Group (97154):</span>
+                  <span>${serviceRates.groupTherapy} = {formatCurrency(serviceRates.groupTherapy * 4)}/hr</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Supervision (97155):</span>
-                  <span>{Math.round(currentMetrics.supervisionHours)}h (max 6h/day)</span>
+                  <span>${serviceRates.supervision} = {formatCurrency(serviceRates.supervision * 4)}/hr</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Family Training (97156):</span>
-                  <span>{Math.round(currentMetrics.familyTrainingHours)}h (max 4h/day)</span>
+                  <span>${serviceRates.familyTraining} = {formatCurrency(serviceRates.familyTraining * 4)}/hr</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Assessment (97151):</span>
-                  <span>{Math.round(currentMetrics.assessmentHours)}h (80 units/year)</span>
+                  <span>Family Group (97157):</span>
+                  <span>${serviceRates.familyGroup} = {formatCurrency(serviceRates.familyGroup * 4)}/hr</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-medium text-green-800 mb-3">Per Encounter</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>ITP (H0032):</span>
+                  <span>${serviceRates.itp} per session</span>
+                </div>
+                <div className="text-xs text-green-600 mb-2">
+                  Effective rate: {formatCurrency(currentMetrics.effectiveItpHourlyRate)}/hr 
+                  (based on {serviceSettings.avgItpDuration} min avg)
+                </div>
+                <div className="flex justify-between">
+                  <span>Coordinated Care (T1024):</span>
+                  <span>${serviceRates.coordinatedCare} per session</span>
+                </div>
+                <div className="text-xs text-green-600">
+                  Effective rate: {formatCurrency(currentMetrics.effectiveCoordinatedCareHourlyRate)}/hr 
+                  (based on {serviceSettings.avgCoordinatedCareDuration} min avg)
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <h3 className="font-medium text-yellow-800 mb-3">Per Minute</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Travel Time (H0046):</span>
+                  <span>${serviceRates.travelTime} per minute</span>
+                </div>
+                <div className="text-xs text-yellow-600">
+                  = {formatCurrency(serviceRates.travelTime * 60)}/hour if continuous
+                </div>
+                <div className="mt-2 text-xs text-yellow-700">
+                  Monthly travel: {Math.round(currentMetrics.totalTravelMinutes)} minutes
+                  = {formatCurrency(currentMetrics.travelRevenue)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Service Revenue Breakdown */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="text-blue-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">Revenue Breakdown by Service Type</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Time-Based Services (Hours & Revenue)</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>ABA Individual (97153):</span>
+                  <span>{Math.round(currentMetrics.directTherapyHours)}h • {formatCurrency(currentMetrics.directTherapyRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Supervision (97155):</span>
+                  <span>{Math.round(currentMetrics.supervisionHours)}h • {formatCurrency(currentMetrics.supervisionRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Family Training (97156):</span>
+                  <span>{Math.round(currentMetrics.familyTrainingHours)}h • {formatCurrency(currentMetrics.familyTrainingRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ABA Group (97154):</span>
+                  <span>{Math.round(currentMetrics.groupTherapyHours)}h • {formatCurrency(currentMetrics.groupTherapyRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Family Group (97157):</span>
+                  <span>{Math.round(currentMetrics.familyGroupHours)}h • {formatCurrency(currentMetrics.familyGroupRevenue)}</span>
+                </div>
+                <div className="flex justify-between text-blue-600 font-medium">
+                  <span>CMDE (97151):</span>
+                  <span>{Math.round(currentMetrics.cmdeHours)}h • {formatCurrency(currentMetrics.cmdeRevenue)}</span>
                 </div>
               </div>
             </div>
             
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Revenue by Service (Actual MHCP Rates)</h3>
+              <h3 className="font-medium text-gray-900 mb-3">Encounter-Based Services (Sessions & Revenue)</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Direct Therapy:</span>
-                  <span>{formatCurrency(currentMetrics.directTherapyRevenue)}</span>
+                <div className="flex justify-between text-green-600 font-medium">
+                  <span>ITP (H0032):</span>
+                  <span>{currentMetrics.itpSessions.toFixed(1)} sessions • {formatCurrency(currentMetrics.itpRevenue)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Group Therapy:</span>
-                  <span>{formatCurrency(currentMetrics.groupTherapyRevenue)}</span>
+                <div className="text-xs text-gray-500 ml-4">
+                  {serviceSettings.itpFrequency} per client/month × {currentMetrics.activeClients} clients
                 </div>
-                <div className="flex justify-between">
-                  <span>Supervision:</span>
-                  <span>{formatCurrency(currentMetrics.supervisionRevenue)}</span>
+                
+                <div className="flex justify-between text-green-600 font-medium">
+                  <span>Coordinated Care (T1024):</span>
+                  <span>{currentMetrics.coordinatedCareSessions.toFixed(1)} sessions • {formatCurrency(currentMetrics.coordinatedCareRevenue)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Family Training:</span>
-                  <span>{formatCurrency(currentMetrics.familyTrainingRevenue)}</span>
+                <div className="text-xs text-gray-500 ml-4">
+                  {serviceSettings.coordinatedCareFrequency} per client/month × {currentMetrics.activeClients} clients
                 </div>
-                <div className="flex justify-between">
-                  <span>Assessment:</span>
-                  <span>{formatCurrency(currentMetrics.assessmentRevenue)}</span>
+                
+                <div className="flex justify-between text-yellow-600">
+                  <span>Travel Time (H0046):</span>
+                  <span>{Math.round(currentMetrics.totalTravelMinutes)} min • {formatCurrency(currentMetrics.travelRevenue)}</span>
                 </div>
+                
                 <div className="flex justify-between border-t pt-2 font-bold">
                   <span>Total Revenue:</span>
                   <span>{formatCurrency(currentMetrics.totalRevenue)}</span>
@@ -688,95 +702,121 @@ const TreehouseFinancialDashboard = () => {
           </div>
         </div>
 
-        {/* MHCP Annual Cap Tracking */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="text-orange-600" size={20} />
-            <h2 className="text-xl font-bold text-gray-900">Annual Cap Monitoring ($37,800 per client)</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600 font-medium">Average Annual Per Client</p>
-              <p className="text-lg font-bold text-blue-800">{formatCurrency(currentMetrics.averageAnnualPerClient)}</p>
-              <p className="text-xs text-blue-600 mt-1">Based on current monthly rate</p>
-            </div>
+        {/* Service Settings Configuration */}
+        {editMode && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Service Frequency & Duration Settings</h3>
             
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">Cap Utilization</p>
-              <p className="text-lg font-bold text-green-800">
-                {((currentMetrics.averageAnnualPerClient / 37800) * 100).toFixed(0)}%
-              </p>
-              <p className="text-xs text-green-600 mt-1">Of $37,800 annual limit</p>
-            </div>
-            
-            <div className={`p-4 rounded-lg ${
-              currentMetrics.clientsAtRisk > 0 ? 'bg-red-50' : 'bg-green-50'
-            }`}>
-              <p className={`text-sm font-medium ${
-                currentMetrics.clientsAtRisk > 0 ? 'text-red-600' : 'text-green-600'
-              }`}>Clients At Risk</p>
-              <p className={`text-lg font-bold ${
-                currentMetrics.clientsAtRisk > 0 ? 'text-red-800' : 'text-green-800'
-              }`}>{currentMetrics.clientsAtRisk}</p>
-              <p className={`text-xs mt-1 ${
-                currentMetrics.clientsAtRisk > 0 ? 'text-red-600' : 'text-green-600'
-              }`}>Approaching annual cap</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="font-medium text-green-800 mb-3">Encounter-Based Services</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">ITP Sessions per Client/Month</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={serviceSettings.itpFrequency}
+                      onChange={(e) => setServiceSettings({...serviceSettings, itpFrequency: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Avg ITP Duration (minutes)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={serviceSettings.avgItpDuration}
+                      onChange={(e) => setServiceSettings({...serviceSettings, avgItpDuration: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Coordinated Care per Client/Month</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={serviceSettings.coordinatedCareFrequency}
+                      onChange={(e) => setServiceSettings({...serviceSettings, coordinatedCareFrequency: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Avg Coordinated Care Duration (minutes)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={serviceSettings.avgCoordinatedCareDuration}
+                      onChange={(e) => setServiceSettings({...serviceSettings, avgCoordinatedCareDuration: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h4 className="font-medium text-yellow-800 mb-3">Travel Time</h4>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Avg Travel per Session (minutes)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={serviceSettings.avgTravelPerSession}
+                    onChange={(e) => setServiceSettings({...serviceSettings, avgTravelPerSession: parseInt(e.target.value) || 0})}
+                    className="w-full border rounded px-2 py-1 text-sm"
+                  />
+                  <p className="text-xs text-yellow-600 mt-1">Rate: ${serviceRates.travelTime}/minute</p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-800 mb-3">Service Rates (per billing unit)</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">ITP per encounter ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={serviceRates.itp}
+                      onChange={(e) => setServiceRates({...serviceRates, itp: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Coordinated Care per encounter ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={serviceRates.coordinatedCare}
+                      onChange={(e) => setServiceRates({...serviceRates, coordinatedCare: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Travel per minute ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={serviceRates.travelTime}
+                      onChange={(e) => setServiceRates({...serviceRates, travelTime: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Client Details Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Client</th>
-                  <th className="text-center py-2">Weekly Hours</th>
-                  <th className="text-center py-2">Annual Used</th>
-                  <th className="text-center py-2">Remaining Cap</th>
-                  <th className="text-center py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentMetrics.complianceChecks.map(client => {
-                  const remainingCap = 37800 - (client.annualUsed || 0);
-                  const weeklyCompliant = client.weeklyHours <= 25;
-                  
-                  return (
-                    <tr key={client.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3">{client.name}</td>
-                      <td className="text-center py-3">
-                        <span className={weeklyCompliant ? 'text-green-600' : 'text-red-600'}>
-                          {client.weeklyHours}h
-                        </span>
-                      </td>
-                      <td className="text-center py-3">{formatCurrency(client.annualUsed || 0)}</td>
-                      <td className="text-center py-3">
-                        <span className={remainingCap > 5000 ? 'text-green-600' : 'text-red-600'}>
-                          {formatCurrency(remainingCap)}
-                        </span>
-                      </td>
-                      <td className="text-center py-3">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          weeklyCompliant && remainingCap > 5000 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {weeklyCompliant && remainingCap > 5000 ? 'Compliant' : 'At Risk'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Client Management with MHCP Compliance */}
+        {/* Client Management */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Client Management (MHCP Compliance)</h2>
+            <h2 className="text-xl font-bold text-gray-900">Client Management</h2>
             {editMode && (
               <button
                 onClick={addClient}
@@ -802,7 +842,7 @@ const TreehouseFinancialDashboard = () => {
               </thead>
               <tbody>
                 {clientData.map(client => {
-                  const monthlyHours = Math.min(client.weeklyHours * 4.33, 25 * 4.33); // Apply MHCP limit
+                  const monthlyHours = Math.min(client.weeklyHours * 4.33, 25 * 4.33);
                   const monthlyRevenue = monthlyHours * currentMetrics.revenuePerHour;
                   const compliance = calculateMHCPCompliance(client);
                   
@@ -889,53 +929,53 @@ const TreehouseFinancialDashboard = () => {
           </div>
         </div>
 
-        {/* Break-even Analysis with MHCP Reality */}
+        {/* Performance Summary */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">MHCP Break-Even Analysis</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Financial Performance Summary</h2>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-red-50 p-4 rounded-lg">
-              <p className="text-sm text-red-600 font-medium">Break-Even Hours (Monthly)</p>
-              <p className="text-2xl font-bold text-red-800">{breakEvenAnalysis.hoursNeeded}h</p>
-              <p className="text-sm text-red-600 mt-1">
-                {formatCurrency(breakEvenAnalysis.fixedCosts)} fixed ÷ {formatCurrency(breakEvenAnalysis.contributionMargin)} margin
-              </p>
-            </div>
-            
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600 font-medium">Current Safety Margin</p>
-              <p className={`text-2xl font-bold ${breakEvenAnalysis.safetyMarginPercent > 20 ? 'text-blue-800' : 'text-red-800'}`}>
-                {breakEvenAnalysis.safetyMarginPercent.toFixed(0)}%
-              </p>
-              <p className="text-sm text-blue-600 mt-1">Above break-even threshold</p>
+              <p className="text-sm text-blue-600 font-medium">Blended Revenue/Hour</p>
+              <p className="text-lg font-bold text-blue-800">{formatCurrency(currentMetrics.revenuePerHour)}</p>
+              <p className="text-xs text-blue-600">All services combined</p>
             </div>
-            
+            <div className="bg-red-50 p-4 rounded-lg">
+              <p className="text-sm text-red-600 font-medium">Cost per Hour</p>
+              <p className="text-lg font-bold text-red-800">{formatCurrency(currentMetrics.costPerHour)}</p>
+              <p className="text-xs text-red-600">Staff + overhead</p>
+            </div>
             <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">Revenue per Hour</p>
-              <p className="text-2xl font-bold text-green-800">{formatCurrency(currentMetrics.revenuePerHour)}</p>
-              <p className="text-sm text-green-600 mt-1">Blended MHCP rate</p>
+              <p className="text-sm text-green-600 font-medium">Profit per Hour</p>
+              <p className="text-lg font-bold text-green-800">{formatCurrency(currentMetrics.profitPerHour)}</p>
+              <p className="text-xs text-green-600">Net margin</p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <p className="text-sm text-purple-600 font-medium">Break-Even Hours</p>
+              <p className="text-lg font-bold text-purple-800">{breakEvenAnalysis.hoursNeeded}h</p>
+              <p className="text-xs text-purple-600">Monthly requirement</p>
             </div>
           </div>
-          
-          <div className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-3">MHCP Financial Reality Check</h3>
+
+          {/* Strategy Recommendations */}
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-3">MHCP Revenue Optimization Strategy</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <h4 className="font-medium text-orange-800 mb-2">Constraints:</h4>
-                <ul className="space-y-1 text-orange-700">
-                  <li>• $54/hour maximum base rate (Level I/QSP)</li>
-                  <li>• 25-hour weekly service limit per client</li>
-                  <li>• $37,800 annual cap per beneficiary</li>
-                  <li>• 60-90 day payment delays + prior auth</li>
+                <h4 className="font-medium text-green-800 mb-2">Maximize Encounter-Based Revenue:</h4>
+                <ul className="space-y-1 text-green-700">
+                  <li>• Increase Coordinated Care frequency (${serviceRates.coordinatedCare}/session)</li>
+                  <li>• Schedule regular ITP reviews (${serviceRates.itp}/session)</li>
+                  <li>• Efficient session lengths to maximize hourly value</li>
+                  <li>• Multiple providers can bill for same encounter</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium text-green-800 mb-2">Optimization Strategies:</h4>
-                <ul className="space-y-1 text-green-700">
-                  <li>• Maximize Level I/QSP staff ratio</li>
-                  <li>• Efficient scheduling to minimize travel</li>
-                  <li>• Strong prior authorization management</li>
-                  <li>• Focus on high-compliance clients</li>
+                <h4 className="font-medium text-blue-800 mb-2">Optimize Time-Based Services:</h4>
+                <ul className="space-y-1 text-blue-700">
+                  <li>• Focus on CMDE assessments ({formatCurrency(serviceRates.cmde * 4)}/hour)</li>
+                  <li>• Minimize low-value group services</li>
+                  <li>• Reduce travel time through scheduling</li>
+                  <li>• Ensure proper 15-minute unit billing</li>
                 </ul>
               </div>
             </div>
