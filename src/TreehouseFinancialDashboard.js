@@ -814,6 +814,655 @@ const TreehouseFinancialDashboard = () => {
           </div>
         )}
 
+        {/* Staff Management Panel */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="text-green-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">Staff Management & Capacity</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Staff Counts */}
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-medium text-green-800 mb-3">Staff Count</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Behavior Technicians</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={staffCount.bt}
+                      onChange={(e) => setStaffCount({...staffCount, bt: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-green-800">{staffCount.bt}</p>
+                  )}
+                  <p className="text-xs text-green-600">Capacity: {staffCount.bt * 130}h/month</p>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">BCBA</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={staffCount.bcba}
+                      onChange={(e) => setStaffCount({...staffCount, bcba: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-green-800">{staffCount.bcba}</p>
+                  )}
+                  <p className="text-xs text-green-600">Capacity: {staffCount.bcba * 100}h/month</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Staff Rates */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-medium text-blue-800 mb-3">Hourly Rates</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">BT Rate ($/hour)</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.50"
+                      value={staffRates.bt}
+                      onChange={(e) => setStaffRates({...staffRates, bt: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-blue-800">{formatCurrency(staffRates.bt)}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">BCBA Rate ($/hour)</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.50"
+                      value={staffRates.bcba}
+                      onChange={(e) => setStaffRates({...staffRates, bcba: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-blue-800">{formatCurrency(staffRates.bcba)}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Utilization */}
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h3 className="font-medium text-purple-800 mb-3">Current Utilization</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">BT Utilization</label>
+                  <p className="text-lg font-bold text-purple-800">{currentMetrics.btUtilization.toFixed(1)}%</p>
+                  <div className={`w-full bg-gray-200 rounded-full h-2 ${currentMetrics.btUtilization > 100 ? 'bg-red-200' : ''}`}>
+                    <div 
+                      className={`h-2 rounded-full ${currentMetrics.btUtilization > 100 ? 'bg-red-600' : currentMetrics.btUtilization > 85 ? 'bg-yellow-500' : 'bg-purple-600'}`}
+                      style={{width: `${Math.min(currentMetrics.btUtilization, 100)}%`}}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">BCBA Utilization</label>
+                  <p className="text-lg font-bold text-purple-800">{currentMetrics.bcbaUtilization.toFixed(1)}%</p>
+                  <div className={`w-full bg-gray-200 rounded-full h-2 ${currentMetrics.bcbaUtilization > 100 ? 'bg-red-200' : ''}`}>
+                    <div 
+                      className={`h-2 rounded-full ${currentMetrics.bcbaUtilization > 100 ? 'bg-red-600' : currentMetrics.bcbaUtilization > 85 ? 'bg-yellow-500' : 'bg-purple-600'}`}
+                      style={{width: `${Math.min(currentMetrics.bcbaUtilization, 100)}%`}}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Staff Costs Summary */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-3">Monthly Staff Costs</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">BT Costs</p>
+                <p className="font-bold text-gray-900">{formatCurrency(currentMetrics.btStaffCost)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">BCBA Costs</p>
+                <p className="font-bold text-gray-900">{formatCurrency(currentMetrics.bcbaStaffCost)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Total Staff</p>
+                <p className="font-bold text-gray-900">{formatCurrency(currentMetrics.totalStaffCost)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Staff/Revenue</p>
+                <p className="font-bold text-gray-900">{((currentMetrics.totalStaffCost / currentMetrics.totalRevenue) * 100).toFixed(1)}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Overhead & Expense Management */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Calculator className="text-red-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">Overhead & Expense Management</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-red-50 p-4 rounded-lg">
+              <h3 className="font-medium text-red-800 mb-3">Facility Costs</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Monthly Rent</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="50"
+                      value={overheadCosts.rent}
+                      onChange={(e) => setOverheadCosts({...overheadCosts, rent: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-red-800">{formatCurrency(overheadCosts.rent)}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <h3 className="font-medium text-orange-800 mb-3">Insurance</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Monthly Insurance</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="25"
+                      value={overheadCosts.insurance}
+                      onChange={(e) => setOverheadCosts({...overheadCosts, insurance: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-orange-800">{formatCurrency(overheadCosts.insurance)}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <h3 className="font-medium text-yellow-800 mb-3">Licensing</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Monthly Licensing</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="25"
+                      value={overheadCosts.licensing}
+                      onChange={(e) => setOverheadCosts({...overheadCosts, licensing: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-yellow-800">{formatCurrency(overheadCosts.licensing)}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-medium text-gray-800 mb-3">Other Expenses</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Monthly Other</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="25"
+                      value={overheadCosts.other}
+                      onChange={(e) => setOverheadCosts({...overheadCosts, other: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  ) : (
+                    <p className="text-lg font-bold text-gray-800">{formatCurrency(overheadCosts.other)}</p>
+                  )}
+                  <p className="text-xs text-gray-600">Supplies, software, etc.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Expense Summary */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-3">Monthly Expense Breakdown</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">Staff Costs</p>
+                <p className="font-bold text-gray-900">{formatCurrency(currentMetrics.totalStaffCost)}</p>
+                <p className="text-xs text-gray-500">{((currentMetrics.totalStaffCost / currentMetrics.totalExpenses) * 100).toFixed(0)}%</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Overhead</p>
+                <p className="font-bold text-gray-900">{formatCurrency(parseFloat(overheadCosts.rent) + parseFloat(overheadCosts.insurance) + parseFloat(overheadCosts.licensing) + parseFloat(overheadCosts.other))}</p>
+                <p className="text-xs text-gray-500">{(((parseFloat(overheadCosts.rent) + parseFloat(overheadCosts.insurance) + parseFloat(overheadCosts.licensing) + parseFloat(overheadCosts.other)) / currentMetrics.totalExpenses) * 100).toFixed(0)}%</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Total Expenses</p>
+                <p className="font-bold text-gray-900">{formatCurrency(currentMetrics.totalExpenses)}</p>
+                <p className="text-xs text-gray-500">100%</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Expense Ratio</p>
+                <p className="font-bold text-gray-900">{((currentMetrics.totalExpenses / currentMetrics.totalRevenue) * 100).toFixed(1)}%</p>
+                <p className="text-xs text-gray-500">of revenue</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Cost per Hour</p>
+                <p className="font-bold text-gray-900">{formatCurrency(currentMetrics.costPerHour)}</p>
+                <p className="text-xs text-gray-500">blended rate</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Break-Even Analysis Panel */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="text-purple-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">Break-Even Analysis & Financial Health</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-red-50 p-4 rounded-lg">
+              <h3 className="font-medium text-red-800 mb-3">Break-Even Metrics</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-red-600">Monthly Hours Needed</p>
+                  <p className="text-2xl font-bold text-red-800">{breakEvenAnalysis.hoursNeeded}h</p>
+                </div>
+                <div>
+                  <p className="text-sm text-red-600">Current Safety Margin</p>
+                  <p className={`text-lg font-bold ${breakEvenAnalysis.safetyMarginPercent > 20 ? 'text-green-800' : 'text-red-800'}`}>
+                    {breakEvenAnalysis.safetyMarginPercent.toFixed(0)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-red-600">Fixed Costs</p>
+                  <p className="text-lg font-bold text-red-800">{formatCurrency(breakEvenAnalysis.fixedCosts)}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-medium text-blue-800 mb-3">Contribution Analysis</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-blue-600">Contribution Margin/Hour</p>
+                  <p className="text-lg font-bold text-blue-800">{formatCurrency(breakEvenAnalysis.contributionMargin)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-blue-600">Variable Cost/Hour</p>
+                  <p className="text-lg font-bold text-blue-800">{formatCurrency(breakEvenAnalysis.variableCostPerHour)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-blue-600">Contribution Ratio</p>
+                  <p className="text-lg font-bold text-blue-800">
+                    {((breakEvenAnalysis.contributionMargin / currentMetrics.revenuePerHour) * 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-medium text-green-800 mb-3">Financial Health</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-green-600">Current Profit</p>
+                  <p className={`text-lg font-bold ${currentMetrics.netProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                    {formatCurrency(currentMetrics.netProfit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-green-600">Profit Margin</p>
+                  <p className={`text-lg font-bold ${currentMetrics.profitMargin >= 10 ? 'text-green-800' : 'text-red-800'}`}>
+                    {currentMetrics.profitMargin.toFixed(1)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-green-600">Cash Flow Risk</p>
+                  <p className={`text-lg font-bold ${currentMetrics.cashFlowRisk === 'High' ? 'text-red-800' : 'text-green-800'}`}>
+                    {currentMetrics.cashFlowRisk}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Service Distribution Settings */}
+        {editMode && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Service Distribution Settings</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-800 mb-3">Time-Based Service Mix</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">ABA Individual (97153) %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      value={serviceDistribution.directTherapy}
+                      onChange={(e) => setServiceDistribution({...serviceDistribution, directTherapy: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Supervision (97155) %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      value={serviceDistribution.supervision}
+                      onChange={(e) => setServiceDistribution({...serviceDistribution, supervision: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Family Training (97156) %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      value={serviceDistribution.familyTraining}
+                      onChange={(e) => setServiceDistribution({...serviceDistribution, familyTraining: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="font-medium text-green-800 mb-3">Group & Assessment Services</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">ABA Group (97154) %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      value={serviceDistribution.groupTherapy}
+                      onChange={(e) => setServiceDistribution({...serviceDistribution, groupTherapy: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Family Group (97157) %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      value={serviceDistribution.familyGroup}
+                      onChange={(e) => setServiceDistribution({...serviceDistribution, familyGroup: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">CMDE (97151) %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      value={serviceDistribution.cmde}
+                      onChange={(e) => setServiceDistribution({...serviceDistribution, cmde: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h4 className="font-medium text-purple-800 mb-3">Growth & Projections</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">New Clients/Month</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={growthAssumptions.newClientsPerMonth}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, newClientsPerMonth: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Avg New Client Hours</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="25"
+                      value={growthAssumptions.averageNewClientHours}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, averageNewClientHours: parseInt(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Annual Rate Increase %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="0.1"
+                      value={growthAssumptions.rateIncreaseAnnual}
+                      onChange={(e) => setGrowthAssumptions({...growthAssumptions, rateIncreaseAnnual: parseFloat(e.target.value) || 0})}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Distribution Summary */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Current Distribution Total</h4>
+              <p className="text-sm text-gray-600">
+                Total: {(serviceDistribution.directTherapy + serviceDistribution.supervision + serviceDistribution.familyTraining + 
+                        serviceDistribution.groupTherapy + serviceDistribution.familyGroup + serviceDistribution.cmde).toFixed(2)} 
+                {(serviceDistribution.directTherapy + serviceDistribution.supervision + serviceDistribution.familyTraining + 
+                  serviceDistribution.groupTherapy + serviceDistribution.familyGroup + serviceDistribution.cmde) !== 1.0 && 
+                  <span className="text-red-600 ml-2">⚠️ Should equal 1.00</span>}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Cash Flow & Working Capital */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign className="text-blue-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">Cash Flow & Working Capital Analysis</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-medium text-blue-800 mb-3">Accounts Receivable</h3>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-blue-800">{formatCurrency(currentMetrics.accountsReceivable)}</p>
+                <p className="text-xs text-blue-600">2.5 months revenue (MHCP delays)</p>
+                <p className="text-xs text-gray-600">
+                  Days: {((currentMetrics.accountsReceivable / currentMetrics.totalRevenue) * 30).toFixed(0)} days outstanding
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <h3 className="font-medium text-yellow-800 mb-3">Working Capital Needed</h3>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-yellow-800">{formatCurrency(currentMetrics.workingCapitalNeeded)}</p>
+                <p className="text-xs text-yellow-600">3 months operating expenses</p>
+                <p className="text-xs text-gray-600">
+                  Coverage: {(currentMetrics.workingCapitalNeeded / currentMetrics.totalExpenses).toFixed(1)} months
+                </p>
+              </div>
+            </div>
+            
+            <div className={`p-4 rounded-lg ${currentMetrics.cashFlowRisk === 'High' ? 'bg-red-50' : 'bg-green-50'}`}>
+              <h3 className={`font-medium mb-3 ${currentMetrics.cashFlowRisk === 'High' ? 'text-red-800' : 'text-green-800'}`}>
+                Cash Flow Risk
+              </h3>
+              <div className="space-y-2">
+                <p className={`text-2xl font-bold ${currentMetrics.cashFlowRisk === 'High' ? 'text-red-800' : 'text-green-800'}`}>
+                  {currentMetrics.cashFlowRisk}
+                </p>
+                <p className={`text-xs ${currentMetrics.cashFlowRisk === 'High' ? 'text-red-600' : 'text-green-600'}`}>
+                  {currentMetrics.cashFlowRisk === 'High' ? 'AR > Working Capital' : 'Adequate reserves'}
+                </p>
+                <p className="text-xs text-gray-600">
+                  Gap: {formatCurrency(Math.abs(currentMetrics.accountsReceivable - currentMetrics.workingCapitalNeeded))}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Cash Flow Recommendations */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-3">Cash Flow Management Strategies</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-medium text-blue-800 mb-2">Improve Collections:</h4>
+                <ul className="space-y-1 text-blue-700">
+                  <li>• Submit claims within 24-48 hours of service</li>
+                  <li>• Follow up on pending authorizations weekly</li>
+                  <li>• Maintain clean claim submission rate >95%</li>
+                  <li>• Consider factoring for large AR balances</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-green-800 mb-2">Working Capital:</h4>
+                <ul className="space-y-1 text-green-700">
+                  <li>• Maintain 3-4 months operating expenses</li>
+                  <li>• Establish line of credit for seasonal gaps</li>
+                  <li>• Consider invoice factoring at 2-3%</li>
+                  <li>• Monitor daily cash flow projections</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Growth Forecasting */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="text-green-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">Growth Forecasting ({forecastMonths} Months)</h2>
+            {editMode && (
+              <select
+                value={forecastMonths}
+                onChange={(e) => setForecastMonths(parseInt(e.target.value))}
+                className="ml-4 border rounded px-2 py-1"
+              >
+                <option value={3}>3 Months</option>
+                <option value={6}>6 Months</option>
+                <option value={12}>12 Months</option>
+                <option value={24}>24 Months</option>
+              </select>
+            )}
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2">Month</th>
+                  <th className="text-center py-2">Clients</th>
+                  <th className="text-center py-2">Hours</th>
+                  <th className="text-center py-2">Revenue</th>
+                  <th className="text-center py-2">Expenses</th>
+                  <th className="text-center py-2">Profit</th>
+                  <th className="text-center py-2">Margin</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b bg-gray-50">
+                  <td className="py-2 font-medium">Current</td>
+                  <td className="text-center py-2">{currentMetrics.activeClients}</td>
+                  <td className="text-center py-2">{Math.round(currentMetrics.totalMonthlyHours)}</td>
+                  <td className="text-center py-2">{formatCurrency(currentMetrics.totalRevenue)}</td>
+                  <td className="text-center py-2">{formatCurrency(currentMetrics.totalExpenses)}</td>
+                  <td className={`text-center py-2 ${currentMetrics.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(currentMetrics.netProfit)}
+                  </td>
+                  <td className="text-center py-2">{currentMetrics.profitMargin.toFixed(1)}%</td>
+                </tr>
+                {forecast.map((month, index) => (
+                  <tr key={index} className="border-b hover:bg-gray-50">
+                    <td className="py-2">Month +{month.month}</td>
+                    <td className="text-center py-2">{month.clients}</td>
+                    <td className="text-center py-2">{Math.round(month.hours)}</td>
+                    <td className="text-center py-2">{formatCurrency(month.revenue)}</td>
+                    <td className="text-center py-2">{formatCurrency(month.expenses)}</td>
+                    <td className={`text-center py-2 ${month.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(month.profit)}
+                    </td>
+                    <td className="text-center py-2">{month.margin.toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Forecast Summary */}
+          <div className="mt-6 p-4 bg-green-50 rounded-lg">
+            <h3 className="font-medium text-green-800 mb-3">{forecastMonths}-Month Projection Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">Projected Clients</p>
+                <p className="font-bold text-green-800">{forecast[forecast.length - 1]?.clients || 0}</p>
+                <p className="text-xs text-green-600">+{((forecast[forecast.length - 1]?.clients || 0) - currentMetrics.activeClients)} clients</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Revenue Growth</p>
+                <p className="font-bold text-green-800">
+                  {(((forecast[forecast.length - 1]?.revenue || 0) - currentMetrics.totalRevenue) / currentMetrics.totalRevenue * 100).toFixed(1)}%
+                </p>
+                <p className="text-xs text-green-600">{formatCurrency((forecast[forecast.length - 1]?.revenue || 0) - currentMetrics.totalRevenue)} increase</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Final Profit</p>
+                <p className={`font-bold ${(forecast[forecast.length - 1]?.profit || 0) >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                  {formatCurrency(forecast[forecast.length - 1]?.profit || 0)}
+                </p>
+                <p className="text-xs text-green-600">{(forecast[forecast.length - 1]?.margin || 0).toFixed(1)}% margin</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Growth Rate</p>
+                <p className="font-bold text-green-800">
+                  {(growthAssumptions.newClientsPerMonth * 12).toFixed(1)} clients/year
+                </p>
+                <p className="text-xs text-green-600">{(growthAssumptions.newClientsPerMonth * 100).toFixed(1)}% monthly</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Client Management */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
