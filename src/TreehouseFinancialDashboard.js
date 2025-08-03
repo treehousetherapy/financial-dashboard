@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Download, Edit3, TrendingUp, DollarSign, Clock, Users, Calculator } from 'lucide-react';
+import { Download, Edit3, TrendingUp, DollarSign, Clock, Users, Calculator, AlertTriangle, CheckCircle } from 'lucide-react';
+import { validateFinancialInputs, validateBusinessLogic, calculateHealthcareMetrics } from './utils/financialValidation';
 
 const TreehouseFinancialDashboard = () => {
   const [editMode, setEditMode] = useState(false);
@@ -159,6 +160,22 @@ const TreehouseFinancialDashboard = () => {
 
   const currentMetrics = calculateMetrics();
   const forecast = calculateForecast();
+  
+  // Financial validation
+  const validationData = {
+    serviceRates,
+    staffRates,
+    btUtilization: currentMetrics.btUtilization,
+    bcbaUtilization: currentMetrics.bcbaUtilization,
+    profitMargin: currentMetrics.profitMargin,
+    serviceDistribution,
+    totalExpenses: currentMetrics.totalExpenses,
+    totalRevenue: currentMetrics.totalRevenue
+  };
+  
+  const validation = validateFinancialInputs(validationData);
+  const businessLogic = validateBusinessLogic(currentMetrics);
+  const healthcareMetrics = calculateHealthcareMetrics(currentMetrics);
 
   const updateClientData = (id, field, value) => {
     setClientData(clients => 
@@ -294,6 +311,99 @@ const TreehouseFinancialDashboard = () => {
                 <p className="text-sm text-gray-500">{currentMetrics.profitMargin.toFixed(1)}% margin</p>
               </div>
               <TrendingUp className="text-emerald-600" size={24} />
+            </div>
+          </div>
+        </div>
+
+        {/* Financial Validation Panel */}
+        {(validation.errors.length > 0 || validation.warnings.length > 0 || businessLogic.length > 0) && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="text-orange-600" size={20} />
+              <h2 className="text-xl font-bold text-gray-900">Financial Health Check</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Errors */}
+              {validation.errors.length > 0 && (
+                <div className="bg-red-50 rounded-lg p-4">
+                  <h3 className="font-medium text-red-800 mb-3 flex items-center gap-2">
+                    <AlertTriangle size={16} />
+                    Critical Issues
+                  </h3>
+                  <ul className="space-y-2">
+                    {validation.errors.map((error, index) => (
+                      <li key={index} className="text-red-700 text-sm">• {error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Warnings */}
+              {validation.warnings.length > 0 && (
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <h3 className="font-medium text-yellow-800 mb-3 flex items-center gap-2">
+                    <AlertTriangle size={16} />
+                    Recommendations
+                  </h3>
+                  <ul className="space-y-2">
+                    {validation.warnings.map((warning, index) => (
+                      <li key={index} className="text-yellow-700 text-sm">• {warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Business Logic Issues */}
+              {businessLogic.length > 0 && (
+                <div className="bg-orange-50 rounded-lg p-4">
+                  <h3 className="font-medium text-orange-800 mb-3 flex items-center gap-2">
+                    <Calculator size={16} />
+                    Business Analysis
+                  </h3>
+                  <ul className="space-y-2">
+                    {businessLogic.map((issue, index) => (
+                      <li key={index} className={`text-sm ${issue.severity === 'error' ? 'text-red-700' : 'text-orange-700'}`}>
+                        • {issue.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Healthcare Industry Metrics */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="text-blue-600" size={20} />
+            <h2 className="text-xl font-bold text-gray-900">Healthcare Industry Benchmarks</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-600 font-medium">Staff Cost Ratio</p>
+              <p className="text-lg font-bold text-blue-800">{healthcareMetrics.staffCostRatio.toFixed(1)}%</p>
+              <p className="text-xs text-blue-600 mt-1">Target: 60-70%</p>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="text-sm text-green-600 font-medium">Revenue per Direct Hour</p>
+              <p className="text-lg font-bold text-green-800">{formatCurrency(healthcareMetrics.revenuePerDirectHour)}</p>
+              <p className="text-xs text-green-600 mt-1">Key efficiency metric</p>
+            </div>
+            
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <p className="text-sm text-purple-600 font-medium">Admin Time Ratio</p>
+              <p className="text-lg font-bold text-purple-800">{healthcareMetrics.adminTimeRatio.toFixed(1)}%</p>
+              <p className="text-xs text-purple-600 mt-1">BCBA documentation burden</p>
+            </div>
+            
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <p className="text-sm text-orange-600 font-medium">Avg Client Value</p>
+              <p className="text-lg font-bold text-orange-800">{formatCurrency(healthcareMetrics.averageClientValue)}</p>
+              <p className="text-xs text-orange-600 mt-1">Monthly revenue per client</p>
             </div>
           </div>
         </div>
